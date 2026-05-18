@@ -2,13 +2,14 @@
   "name": "lekope-fis",
   "version": "2.0.0",
   "private": true,
+  "homepage": "https://Maloke03.github.io/lekope-FIS",
   "dependencies": {
     "@react-pdf/renderer": "^4.5.1",
     "axios": "^1.15.2",
     "chart.js": "^4.4.0",
     "emailjs-com": "^3.2.0",
-    "jspdf": "^2.5.2",
-    "jspdf-autotable": "^3.8.2",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.7",
     "jwt-decode": "^4.0.0",
     "lucide-react": "^0.303.0",
     "mongodb": "^7.2.0",
@@ -23,7 +24,13 @@
     "start": "set GENERATE_SOURCEMAP=false && react-scripts start",
     "build": "set GENERATE_SOURCEMAP=false && react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d build"
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.3",
+    "gh-pages": "^6.3.0"
   },
   "browserslist": {
     "production": [
