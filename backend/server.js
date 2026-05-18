@@ -20,9 +20,41 @@ dotenv.config();
 
 const app = express();
 
-// Middleware
-app.use(cors());
+// ============ UPDATED CORS CONFIGURATION ============
+// Allow your frontend to connect from GitHub Pages
+app.use(cors({
+  origin: [
+    'http://localhost:3000',           // Local development
+    'https://maloke03.github.io',      // Your GitHub Pages frontend
+    'https://lekope-fis.onrender.com'  // Your backend itself
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json());
+
+// ============ ROOT ROUTE ============
+app.get('/', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    message: 'Lekope FM API is running',
+    endpoints: {
+      health: '/api/health',
+      invoices: '/api/invoices',
+      expenses: '/api/expenses',
+      revenue: '/api/revenue',
+      payroll: '/api/payroll',
+      assets: '/api/assets',
+      tax: '/api/tax',
+      advertisers: '/api/advertisers',
+      bookings: '/api/bookings',
+      login: '/api/login',
+      register: '/api/register'
+    }
+  });
+});
 
 // MongoDB Connection
 // Note: useNewUrlParser and useUnifiedTopology are deprecated in Mongoose 8.x
