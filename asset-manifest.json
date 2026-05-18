@@ -1,0 +1,28 @@
+{
+  "files": {
+    "main.css": "/lekope-fis/static/css/main.14f546ab.css",
+    "main.js": "/lekope-fis/static/js/main.243237d0.js",
+    "static/js/239.d6d92b4b.chunk.js": "/lekope-fis/static/js/239.d6d92b4b.chunk.js",
+    "static/js/977.c9b11af2.chunk.js": "/lekope-fis/static/js/977.c9b11af2.chunk.js",
+    "static/js/732.3f7c2e18.chunk.js": "/lekope-fis/static/js/732.3f7c2e18.chunk.js",
+    "static/media/auth.jpg": "/lekope-fis/static/media/auth.05630ff7a37860fe5382.jpg",
+    "static/media/finance_dash2.jpg": "/lekope-fis/static/media/finance_dash2.10b68730ce4c90bef812.jpg",
+    "static/media/finance_dash3.jpg": "/lekope-fis/static/media/finance_dash3.ba8f68e239a64cab967c.jpg",
+    "static/media/home3.jpg": "/lekope-fis/static/media/home3.ace90a802c6129f7c550.jpg",
+    "static/media/home4.jpg": "/lekope-fis/static/media/home4.8ffa33e915dbe8e92bc3.jpg",
+    "static/media/home2.jpg": "/lekope-fis/static/media/home2.e06a0f38259ab1a2e005.jpg",
+    "static/media/finance_dash1.jpg": "/lekope-fis/static/media/finance_dash1.8767f78e06e3778ee515.jpg",
+    "static/media/landing-hero.jpg": "/lekope-fis/static/media/landing-hero.c0f4f99581dcc06fdce0.jpg",
+    "static/media/home1.jpg": "/lekope-fis/static/media/home1.1e6a1f5dc58de4a6a7b2.jpg",
+    "index.html": "/lekope-fis/index.html",
+    "main.14f546ab.css.map": "/lekope-fis/static/css/main.14f546ab.css.map",
+    "main.243237d0.js.map": "/lekope-fis/static/js/main.243237d0.js.map",
+    "239.d6d92b4b.chunk.js.map": "/lekope-fis/static/js/239.d6d92b4b.chunk.js.map",
+    "977.c9b11af2.chunk.js.map": "/lekope-fis/static/js/977.c9b11af2.chunk.js.map",
+    "732.3f7c2e18.chunk.js.map": "/lekope-fis/static/js/732.3f7c2e18.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.14f546ab.css",
+    "static/js/main.243237d0.js"
+  ]
+}
