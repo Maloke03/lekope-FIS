@@ -1,8 +1,8 @@
 # Dependencies
 node_modules/
-.env
-.env.local
-.env.production
+#.env
+#.env.local
+#.env.production
 
 # Build files
 build/
@@ -21,4 +21,4 @@ Thumbs.db
 npm-debug.log*
 
 # Environment files
-*.env
+#*.env
