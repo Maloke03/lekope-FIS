@@ -7,7 +7,7 @@ const AuthContext = createContext();
 export const useAuth = () => useContext(AuthContext);
 
 // API URL - Change this to your deployed backend URL
-const API_URL = process.env.REACT_APP_API_URL || 'https://lekope-fis.onrender.com/api';
+const API_URL = 'https://lekope-fis.onrender.com/api';
 
 export const ROLES = {
   STATION_MANAGER: 'STATION_MANAGER',
