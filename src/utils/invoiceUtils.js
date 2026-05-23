@@ -122,34 +122,34 @@ Please find attached invoice *${invoice.id}* for the amount of *${formatCurrency
 
 💳 *Payment Details:*
 Bank: First National Bank
-Account: Leloke FM
+Account: Lekope FM
 Account Number: 62812345678
 Reference: ${invoice.id}
 
 Thank you for your business!
 
-*Leloke FM Finance Department*`;
+*Lekope FM Finance Department*`;
 
   return encodeURIComponent(message);
 };
 
 // Send via Email - Opens default email client
 export const sendViaEmailClient = (invoice) => {
-  const subject = `Invoice ${invoice.id} from Leloke FM`;
+  const subject = `Invoice ${invoice.id} from Lekope FM`;
   const body = `Dear ${invoice.client},
 
 Please find attached invoice ${invoice.id} for ${formatCurrency(invoice.amount)} due on ${invoice.due}.
 
 Payment Details:
 Bank: First National Bank
-Account: Leloke FM
+Account: Lekope FM
 Account Number: 62812345678
 Reference: ${invoice.id}
 
 Thank you for your business!
 
 Best regards,
-Leloke FM Finance Department
+Lekope FM Finance Department
 Tel: +266 1234 5678
 Email: finance@lekopefm.co.ls`;
 

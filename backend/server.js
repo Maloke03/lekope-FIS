@@ -18,6 +18,14 @@ const bookingRoutes = require('./routes/bookingRoutes');
 
 dotenv.config();
 
+// Ensure JWT secret is set for token signing/verification.
+// If not provided in the environment (development setups), use a dev default
+// and log a warning so production deployments must set a real secret.
+if (!process.env.JWT_SECRET) {
+  console.warn('WARNING: JWT_SECRET is not set. Using insecure default for development.');
+  process.env.JWT_SECRET = 'dev_jwt_secret_change_me';
+}
+
 const app = express();
 
 // ============ UPDATED CORS CONFIGURATION ============
