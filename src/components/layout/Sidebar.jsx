@@ -7,7 +7,7 @@ import {
   Database, Megaphone, Calendar, LogOut, UserCircle,
 } from 'lucide-react';
 
-const Sidebar = () => {
+const Sidebar = ({ isOpen, closeSidebar }) => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const { user, hasRole, logout } = useAuth();
@@ -84,7 +84,7 @@ const Sidebar = () => {
   };
 
   return (
-    <aside style={{
+    <aside className={isOpen ? 'app-sidebar open' : 'app-sidebar'} style={{
       width:265, height:'100vh', position:'fixed', top:0, left:0,
       background:'var(--bg-surface)', borderRight:'1px solid var(--border)',
       display:'flex', flexDirection:'column', zIndex:100, overflowY:'auto',
@@ -118,7 +118,10 @@ const Sidebar = () => {
               return (
                 <button
                   key={path}
-                  onClick={() => navigate(path)}
+                  onClick={() => {
+                    navigate(path);
+                    if (closeSidebar) closeSidebar();
+                  }}
                   style={{
                     width:'100%', display:'flex', alignItems:'center', gap:10,
                     padding:'9px 12px', marginBottom:2,

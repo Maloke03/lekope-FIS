@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider, PAGE_ACCESS } from './contexts/AuthContext';
 
 import Login from './components/auth/Login';
@@ -28,22 +28,27 @@ import Analytics from './pages/Analytics';
 import LandingPage from './pages/LandingPage';
 
 const Layout = ({ children }) => {
+  const [sidebarOpen, setSidebarOpen] = React.useState(false);
+  const closeSidebar = () => setSidebarOpen(false);
+
   return (
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
-      <Sidebar />
-      <div style={{ marginLeft: 265, flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        <Topbar />
+    <div className="app-wrapper">
+      <Sidebar isOpen={sidebarOpen} closeSidebar={closeSidebar} />
+      <div className="app-main">
+        <Topbar onToggleSidebar={() => setSidebarOpen(open => !open)} />
         <main style={{ flex: 1, padding: '24px 28px' }}>
           {children}
         </main>
       </div>
+
+      {sidebarOpen && <div className="sidebar-backdrop" onClick={closeSidebar} />}
     </div>
   );
 };
 
 function App() {
   return (
-    <BrowserRouter>
+    <Router>
       <AuthProvider>
         <Routes>
           {/* ===================== PUBLIC ROUTES ===================== */}
@@ -196,7 +201,7 @@ function App() {
           <Route path="*" element={<LandingPage />} />
         </Routes>
       </AuthProvider>
-    </BrowserRouter>
+    </Router>
   );
 }
 

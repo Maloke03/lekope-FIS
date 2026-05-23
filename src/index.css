@@ -1396,3 +1396,79 @@ body {
   .dashboard-stat-card { padding: 20px; }
   .dashboard-stat-card .value { font-size: 1.6rem; }
 }
+
+/* App responsive layout */
+.app-wrapper {
+  display: flex;
+  min-height: 100vh;
+}
+
+.app-main {
+  flex: 1;
+  margin-left: 265px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.app-sidebar {
+  transform: translateX(0);
+  transition: transform 0.25s ease;
+}
+
+.sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 140;
+}
+
+.sidebar-toggle-button {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  border: none;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background 0.18s ease;
+}
+
+.sidebar-toggle-button:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+@media (max-width: 900px) {
+  .app-main {
+    margin-left: 0;
+  }
+
+  .app-sidebar {
+    transform: translateX(-100%);
+    width: 255px;
+    height: 100vh;
+    z-index: 150;
+    box-shadow: 24px 0 60px rgba(0, 0, 0, 0.25);
+  }
+
+  .app-sidebar.open {
+    transform: translateX(0);
+  }
+
+  .sidebar-toggle-button {
+    display: inline-flex;
+  }
+
+  .app-main main {
+    padding: 18px 16px;
+  }
+}
+
+@media (max-width: 620px) {
+  .app-main main {
+    padding: 16px 14px;
+  }
+}

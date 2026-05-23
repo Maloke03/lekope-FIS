@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { Bell, User, LogOut } from 'lucide-react';
+import { Bell, User, LogOut, Menu } from 'lucide-react';
 import { useAuth, ROLES } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
-const Topbar = () => {
+const Topbar = ({ onToggleSidebar }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -59,6 +59,15 @@ const Topbar = () => {
       gap:14
     }}>
       {/* Left side - Welcome message */}
+      <button
+        type="button"
+        className="sidebar-toggle-button"
+        onClick={onToggleSidebar}
+        aria-label="Toggle menu"
+      >
+        <Menu size={18} />
+      </button>
+
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <div style={{
           fontSize: '0.85rem',
