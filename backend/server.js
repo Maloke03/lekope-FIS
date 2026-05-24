@@ -78,6 +78,26 @@ const isLocalMongoUri = (uri) => /^mongodb:\/\/(localhost|127\.0\.0\.1)(:|\/)/i.
 
 const maskMongoUri = (uri = '') => uri.replace(/\/\/([^:/@]+):([^@]+)@/, '//***:***@');
 
+const recordAuditEntry = async (req, { status = 'INFO', actionType = 'SYSTEM', targetType = 'GENERAL', details = '', reason = '' }) => {
+  try {
+    await LoginHistory.create({
+      user: req.user?._id,
+      name: req.user?.name,
+      email: req.user?.email,
+      role: req.user?.role,
+      status,
+      actionType,
+      targetType,
+      details,
+      reason,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent')
+    });
+  } catch (error) {
+    console.error('Failed to record audit entry:', error);
+  }
+};
+
 const getConnectionState = () => {
   const states = ['disconnected', 'connected', 'connecting', 'disconnecting'];
   return states[mongoose.connection.readyState] || 'unknown';
@@ -687,7 +707,7 @@ const Expense = mongoose.models.Expense || mongoose.model('Expense', expenseSche
 // ============ EXPENSE API ROUTES ============
 
 // Get all expenses
-app.get('/api/expenses', async (req, res) => {
+app.get('/api/expenses', protect, async (req, res) => {
   try {
     const expenses = await Expense.find().sort({ date: -1, createdAt: -1 });
     res.json(expenses);
@@ -698,7 +718,7 @@ app.get('/api/expenses', async (req, res) => {
 });
 
 // Get expense summary (KPIs)
-app.get('/api/expenses/summary', async (req, res) => {
+app.get('/api/expenses/summary', protect, async (req, res) => {
   try {
     const expenses = await Expense.find();
     const currentYear = new Date().getFullYear();
@@ -1246,17 +1266,22 @@ app.get('/api/budget/summary', protect, canViewReports, async (req, res) => {
 });
 
 // Create new expense
-app.post('/api/expenses', async (req, res) => {
+app.post('/api/expenses', protect, async (req, res) => {
   try {
     const { id } = req.body;
-    
     const existingExpense = await Expense.findOne({ id });
     if (existingExpense) {
       return res.status(400).json({ error: 'Expense with this ID already exists' });
     }
-    
-    const expense = new Expense(req.body);
+
+    const expense = new Expense({ ...req.body, recordedBy: req.user._id });
     await expense.save();
+    await recordAuditEntry(req, {
+      status: 'SUCCESS',
+      actionType: 'EXPENSE_CREATE',
+      targetType: 'EXPENSE',
+      details: `Created expense ${id}`
+    });
     res.status(201).json(expense);
   } catch (error) {
     console.error('Error creating expense:', error);
@@ -1265,29 +1290,54 @@ app.post('/api/expenses', async (req, res) => {
 });
 
 // Update expense
-app.put('/api/expenses/:id', async (req, res) => {
+app.put('/api/expenses/:id', protect, async (req, res) => {
   try {
-    const expense = await Expense.findOneAndUpdate(
-      { id: req.params.id },
-      { ...req.body, updatedAt: new Date() },
-      { new: true }
-    );
+    const expense = await Expense.findOne({ id: req.params.id });
     if (!expense) {
       return res.status(404).json({ error: 'Expense not found' });
     }
-    res.json(expense);
+
+    const nextStatus = req.body.status;
+    if (nextStatus && ['APPROVED', 'PAID'].includes(nextStatus) && expense.amount > 5000 && req.user.role !== 'STATION_MANAGER') {
+      return res.status(403).json({ error: 'Only the Station Manager can approve high-value expenses above LSL 5,000' });
+    }
+
+    const updatedExpense = await Expense.findOneAndUpdate(
+      { id: req.params.id },
+      { ...req.body, updatedAt: new Date(), approvedBy: nextStatus && ['APPROVED', 'PAID'].includes(nextStatus) ? req.user._id : expense.approvedBy },
+      { new: true }
+    );
+    if (!updatedExpense) {
+      return res.status(404).json({ error: 'Expense not found' });
+    }
+
+    await recordAuditEntry(req, {
+      status: 'SUCCESS',
+      actionType: 'EXPENSE_UPDATE',
+      targetType: 'EXPENSE',
+      details: `Updated expense ${req.params.id} status to ${nextStatus || expense.status}`
+    });
+    res.json(updatedExpense);
   } catch (error) {
+    console.error('Error updating expense:', error);
     res.status(500).json({ error: 'Failed to update expense' });
   }
 });
 
 // Delete expense
-app.delete('/api/expenses/:id', async (req, res) => {
+app.delete('/api/expenses/:id', protect, hasRole('STATION_MANAGER', 'FINANCE_OFFICER', 'AUDITOR'), async (req, res) => {
   try {
     const expense = await Expense.findOneAndDelete({ id: req.params.id });
     if (!expense) {
       return res.status(404).json({ error: 'Expense not found' });
     }
+
+    await recordAuditEntry(req, {
+      status: 'SUCCESS',
+      actionType: 'EXPENSE_DELETE',
+      targetType: 'EXPENSE',
+      details: `Deleted expense ${req.params.id}`
+    });
     res.json({ message: 'Expense deleted successfully' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete expense' });
@@ -1310,7 +1360,7 @@ const payrollSchema = new mongoose.Schema({
   net: { type: Number, required: true },
   status: { 
     type: String, 
-    enum: ['Pending', 'Paid', 'Processing'],
+    enum: ['Pending', 'Approved', 'Paid', 'Processing'],
     default: 'Pending'
   },
   month: { type: String, required: true }, // e.g., "March 2026"
@@ -1325,6 +1375,20 @@ const payrollSchema = new mongoose.Schema({
 });
 
 const Payroll = mongoose.models.Payroll || mongoose.model('Payroll', payrollSchema);
+
+// ============ RATE CARD SCHEMA ============
+const rateCardSchema = new mongoose.Schema({
+  id: { type: String, unique: true, required: true },
+  name: { type: String, required: true },
+  description: { type: String, default: '' },
+  category: { type: String, default: 'General' },
+  rate: { type: Number, required: true },
+  active: { type: Boolean, default: true },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+});
+
+const RateCard = mongoose.models.RateCard || mongoose.model('RateCard', rateCardSchema);
 
 // ============ PAYROLL API ROUTES ============
 
@@ -1485,6 +1549,27 @@ app.post('/api/payroll/mark-all-paid', async (req, res) => {
   }
 });
 
+app.post('/api/payroll/approve-run', protect, hasRole('STATION_MANAGER'), async (req, res) => {
+  try {
+    const currentDate = new Date();
+    const currentMonth = currentDate.toLocaleString('default', { month: 'long' });
+    const currentYear = currentDate.getFullYear();
+
+    await Payroll.updateMany(
+      { month: currentMonth, year: currentYear, status: 'Pending' },
+      {
+        status: 'Approved',
+        updatedAt: new Date()
+      }
+    );
+
+    res.json({ message: 'Payroll run approved for current month' });
+  } catch (error) {
+    console.error('Error approving payroll run:', error);
+    res.status(500).json({ error: 'Failed to approve payroll run' });
+  }
+});
+
 // Delete payroll record
 app.delete('/api/payroll/:id', async (req, res) => {
   try {
@@ -1495,6 +1580,64 @@ app.delete('/api/payroll/:id', async (req, res) => {
     res.json({ message: 'Payroll record deleted successfully' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete payroll record' });
+  }
+});
+
+// ============ RATE CARD API ROUTES ============
+app.get('/api/rate-card', protect, async (req, res) => {
+  try {
+    const rates = await RateCard.find().sort({ name: 1 });
+    res.json(rates);
+  } catch (error) {
+    console.error('Error fetching rate card:', error);
+    res.status(500).json({ error: 'Failed to fetch rate card items' });
+  }
+});
+
+app.post('/api/rate-card', protect, hasRole('STATION_MANAGER'), async (req, res) => {
+  try {
+    const { id, name, description, category, rate } = req.body;
+    if (!id || !name || typeof rate !== 'number') {
+      return res.status(400).json({ error: 'Rate card item must contain id, name, and numeric rate' });
+    }
+
+    const existing = await RateCard.findOne({ id });
+    if (existing) {
+      return res.status(400).json({ error: 'Rate card item with this ID already exists' });
+    }
+
+    const item = new RateCard({ id, name, description, category, rate });
+    await item.save();
+    res.status(201).json(item);
+  } catch (error) {
+    console.error('Error creating rate card item:', error);
+    res.status(500).json({ error: 'Failed to create rate card item' });
+  }
+});
+
+app.put('/api/rate-card/:id', protect, hasRole('STATION_MANAGER'), async (req, res) => {
+  try {
+    const rateItem = await RateCard.findOneAndUpdate(
+      { id: req.params.id },
+      { ...req.body, updatedAt: new Date() },
+      { new: true }
+    );
+    if (!rateItem) return res.status(404).json({ error: 'Rate card item not found' });
+    res.json(rateItem);
+  } catch (error) {
+    console.error('Error updating rate card item:', error);
+    res.status(500).json({ error: 'Failed to update rate card item' });
+  }
+});
+
+app.delete('/api/rate-card/:id', protect, hasRole('STATION_MANAGER'), async (req, res) => {
+  try {
+    const rateItem = await RateCard.findOneAndDelete({ id: req.params.id });
+    if (!rateItem) return res.status(404).json({ error: 'Rate card item not found' });
+    res.json({ message: 'Rate card item deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting rate card item:', error);
+    res.status(500).json({ error: 'Failed to delete rate card item' });
   }
 });
 

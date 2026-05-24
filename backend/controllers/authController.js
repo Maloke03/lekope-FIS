@@ -1,25 +1,8 @@
 const User = require('../models/User');
-const LoginHistory = require('../models/LoginHistory');
 const jwt = require('jsonwebtoken');
+const { recordAuditEntry } = require('../utils/auditLogger');
 
 const { VALID_ROLES, normalizeRole } = User;
-
-const recordLoginHistory = async (req, { user, email, status, reason }) => {
-  try {
-    await LoginHistory.create({
-      user: user?._id,
-      name: user?.name,
-      email: user?.email || email,
-      role: user?.role,
-      status,
-      reason,
-      ipAddress: req.ip,
-      userAgent: req.get('user-agent')
-    });
-  } catch (error) {
-    console.error('Failed to record login history:', error);
-  }
-};
 
 // Register new user
 const register = async (req, res) => {
@@ -38,6 +21,12 @@ const register = async (req, res) => {
 
     const user = new User({ name, email, password, role: normalizedRole });
     await user.save();
+    await recordAuditEntry(req, {
+      status: 'SUCCESS',
+      actionType: 'USER_REGISTER',
+      targetType: 'USER',
+      details: `Registered new user ${email}`
+    });
 
     const token = jwt.sign(
       { id: user._id, email: user.email, role: user.role, name: user.name },
@@ -68,25 +57,25 @@ const login = async (req, res) => {
 
     const user = await User.findOne({ email });
     if (!user) {
-      await recordLoginHistory(req, { email, status: 'FAILED', reason: 'User not found' });
+      await recordAuditEntry(req, { status: 'FAILED', actionType: 'LOGIN', targetType: 'AUTH', reason: 'User not found' });
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     if (!user.isActive) {
-      await recordLoginHistory(req, { user, email, status: 'FAILED', reason: 'Account is deactivated' });
+      await recordAuditEntry(req, { user, status: 'FAILED', actionType: 'LOGIN', targetType: 'AUTH', reason: 'Account is deactivated' });
       return res.status(401).json({ error: 'Account is deactivated' });
     }
 
     const isValidPassword = await user.comparePassword(password);
     if (!isValidPassword) {
-      await recordLoginHistory(req, { user, email, status: 'FAILED', reason: 'Invalid password' });
+      await recordAuditEntry(req, { user, status: 'FAILED', actionType: 'LOGIN', targetType: 'AUTH', reason: 'Invalid password' });
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     user.lastLogin = new Date();
     user.role = normalizeRole(user.role);
     await user.save();
-    await recordLoginHistory(req, { user, email, status: 'SUCCESS' });
+    await recordAuditEntry(req, { user, status: 'SUCCESS', actionType: 'LOGIN', targetType: 'AUTH', details: `User ${user.email} logged in` });
 
     const token = jwt.sign(
       { id: user._id, email: user.email, role: user.role, name: user.name },

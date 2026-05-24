@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { TrendingUp, DollarSign, TrendingDown, FileText, Download, Calendar, RefreshCw } from 'lucide-react';
 import { Chart, registerables } from 'chart.js';
+import { jsPDF } from 'jspdf';
 import { reportService } from '../services/reportService';
 import { lsl } from '../utils/helpers';
 
@@ -32,20 +33,112 @@ const FinReports = () => {
     }
   };
 
-  const exportReports = () => {
-    if (!reportData) return;
-
-    const jsonData = JSON.stringify(reportData, null, 2);
-    const blob = new Blob([jsonData], { type: 'application/json' });
+  const downloadFile = (content, fileName, mimeType) => {
+    const blob = new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
 
     link.href = url;
-    link.download = `financial-reports-${new Date().toISOString().slice(0,10)}.json`;
+    link.download = fileName;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+  };
+
+  const exportReportsJSON = () => {
+    if (!reportData) return;
+    const jsonData = JSON.stringify(reportData, null, 2);
+    downloadFile(jsonData, `financial-reports-${new Date().toISOString().slice(0,10)}.json`, 'application/json');
+  };
+
+  const exportReportsCSV = () => {
+    if (!reportData) return;
+
+    const rows = [];
+    rows.push(['Lekope FM Financial Report', `Date: ${new Date().toLocaleDateString()}`]);
+    rows.push([]);
+    rows.push(['Income Statement']);
+    reportData.incomeStatement.revenue.forEach((item) => rows.push([item.name, item.amount]));
+    rows.push([]);
+    rows.push(['Expenses']);
+    reportData.incomeStatement.expenses.forEach((item) => rows.push([item.name, item.amount]));
+    rows.push([]);
+    rows.push(['Balance Sheet - Current Assets']);
+    Object.entries(reportData.balanceSheet.currentAssets).forEach(([key, value]) => rows.push([key, value]));
+    rows.push([]);
+    rows.push(['Balance Sheet - Fixed Assets']);
+    Object.entries(reportData.balanceSheet.fixedAssets).forEach(([key, value]) => rows.push([key, value]));
+    rows.push([]);
+    rows.push(['Balance Sheet Totals']);
+    rows.push(['Total Assets', reportData.balanceSheet.totalAssets]);
+    rows.push(['Total Liabilities', reportData.balanceSheet.totalLiabilities]);
+    rows.push(['Owner\'s Equity', reportData.balanceSheet.ownersEquity]);
+
+    const csv = rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\r\n');
+    downloadFile(csv, `financial-reports-${new Date().toISOString().slice(0,10)}.csv`, 'text/csv;charset=utf-8;');
+  };
+
+  const exportReportsPDF = () => {
+    if (!reportData) return;
+
+    const doc = new jsPDF({ orientation: 'portrait' });
+    const dateLabel = new Date().toLocaleDateString();
+    const marginLeft = 16;
+    let y = 18;
+
+    doc.setFontSize(18);
+    doc.text('Lekope FM Financial Report', marginLeft, y);
+    y += 8;
+    doc.setFontSize(10);
+    doc.text(`Date: ${dateLabel}`, marginLeft, y);
+    y += 12;
+
+    doc.setFontSize(12);
+    doc.text('Income Statement', marginLeft, y);
+    y += 8;
+    reportData.incomeStatement.revenue.forEach((item) => {
+      doc.text(`${item.name}`, marginLeft, y);
+      doc.text(`${lsl(item.amount)}`, 180, y, { align: 'right' });
+      y += 7;
+    });
+    y += 6;
+    doc.text('Expenses', marginLeft, y);
+    y += 8;
+    reportData.incomeStatement.expenses.forEach((item) => {
+      doc.text(`${item.name}`, marginLeft, y);
+      doc.text(`${lsl(item.amount)}`, 180, y, { align: 'right' });
+      y += 7;
+    });
+    y += 10;
+    doc.setFontSize(12);
+    doc.text('Balance Sheet', marginLeft, y);
+    y += 8;
+    Object.entries(reportData.balanceSheet.currentAssets).forEach(([key, value]) => {
+      doc.text(`${key}`, marginLeft, y);
+      doc.text(`${lsl(value)}`, 180, y, { align: 'right' });
+      y += 7;
+    });
+    y += 4;
+    Object.entries(reportData.balanceSheet.fixedAssets).forEach(([key, value]) => {
+      doc.text(`${key}`, marginLeft, y);
+      doc.text(`${lsl(value)}`, 180, y, { align: 'right' });
+      y += 7;
+    });
+    y += 8;
+    doc.setFontSize(11);
+    doc.text('Totals', marginLeft, y);
+    y += 7;
+    doc.text('Total Assets', marginLeft, y);
+    doc.text(`${lsl(reportData.balanceSheet.totalAssets)}`, 180, y, { align: 'right' });
+    y += 7;
+    doc.text('Total Liabilities', marginLeft, y);
+    doc.text(`${lsl(reportData.balanceSheet.totalLiabilities)}`, 180, y, { align: 'right' });
+    y += 7;
+    doc.text('Owner\'s Equity', marginLeft, y);
+    doc.text(`${lsl(reportData.balanceSheet.ownersEquity)}`, 180, y, { align: 'right' });
+    y += 10;
+    doc.save(`financial-report-${new Date().toISOString().slice(0,10)}.pdf`);
   };
 
   useEffect(() => {
@@ -204,8 +297,14 @@ const FinReports = () => {
           <button className="btn btn-ghost btn-sm" onClick={loadData} disabled={loading} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <RefreshCw size={14} /> Reload
           </button>
-          <button className="btn btn-gold" onClick={exportReports} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Download size={14} />Export All
+          <button className="btn btn-ghost btn-sm" onClick={exportReportsPDF} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Download size={14} /> PDF
+          </button>
+          <button className="btn btn-ghost btn-sm" onClick={exportReportsCSV} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Download size={14} /> CSV
+          </button>
+          <button className="btn btn-gold" onClick={exportReportsJSON} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Download size={14} /> JSON
           </button>
         </div>
       </div>

@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const { recordAuditEntry } = require('../utils/auditLogger');
 
 const { VALID_ROLES, normalizeRole } = User;
 
@@ -31,7 +32,6 @@ const updateUser = async (req, res) => {
     const { name, role, isActive } = req.body;
     const normalizedRole = role ? normalizeRole(role) : undefined;
     
-    // Optional: Validate role
     if (normalizedRole && !VALID_ROLES.includes(normalizedRole)) {
       return res.status(400).json({ error: 'Invalid role' });
     }
@@ -48,9 +48,46 @@ const updateUser = async (req, res) => {
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
+
+    await recordAuditEntry(req, {
+      status: 'SUCCESS',
+      actionType: 'USER_UPDATE',
+      targetType: 'USER',
+      details: `Updated user ${user.email}`
+    });
+
     res.json(user);
   } catch (error) {
     res.status(500).json({ error: 'Failed to update user' });
+  }
+};
+
+// Reset user password
+const updateUserPassword = async (req, res) => {
+  try {
+    const { password } = req.body;
+    if (!password) {
+      return res.status(400).json({ error: 'Password is required' });
+    }
+
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    user.password = password;
+    await user.save();
+
+    await recordAuditEntry(req, {
+      status: 'SUCCESS',
+      actionType: 'USER_PASSWORD_RESET',
+      targetType: 'USER',
+      details: `Reset password for ${user.email}`
+    });
+
+    res.json({ message: 'Password updated successfully' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update password' });
   }
 };
 
@@ -61,10 +98,18 @@ const deleteUser = async (req, res) => {
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
+
+    await recordAuditEntry(req, {
+      status: 'SUCCESS',
+      actionType: 'USER_DELETE',
+      targetType: 'USER',
+      details: `Deleted user ${user.email}`
+    });
+
     res.json({ message: 'User deleted successfully' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete user' });
   }
 };
 
-module.exports = { getUsers, getUser, updateUser, deleteUser };
+module.exports = { getUsers, getUser, updateUser, updateUserPassword, deleteUser };

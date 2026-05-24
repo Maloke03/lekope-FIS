@@ -3,6 +3,7 @@ import { TrendingDown, AlertTriangle, Clock, Plus, Search, Filter, Download, Edi
 import { Chart, registerables } from 'chart.js';
 import { KPI, Modal, Field, Inp, Sel, Prog } from '../components/common/UI';
 import { expenseService } from '../services/expenseService';
+import { useAuth, ROLES } from '../contexts/AuthContext';
 import { formatCurrency } from '../utils/invoiceUtils';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -42,6 +43,7 @@ const Expenses = () => {
 
   const CATEGORIES = ['Salaries', 'Licensing', 'Equipment', 'Utilities', 'Marketing', 'Operations', 'Other'];
   const STATUSES = ['PENDING', 'APPROVED', 'PAID', 'REJECTED'];
+  const APPROVAL_THRESHOLD = 5000;
 
   // Load all data
   const loadData = async () => {
@@ -225,7 +227,22 @@ const Expenses = () => {
     setAddOpen(true);
   };
 
-  const updateStatus = async (id, newStatus) => {
+  const { user } = useAuth();
+
+  const canUpdateStatus = (expense, nextStatus) => {
+    if (user?.role === ROLES.AUDITOR) return false;
+    if (expense.amount > APPROVAL_THRESHOLD && ['APPROVED', 'PAID'].includes(nextStatus) && user?.role !== ROLES.STATION_MANAGER) {
+      return false;
+    }
+    return true;
+  };
+
+  const updateStatus = async (id, newStatus, expense) => {
+    if (expense?.amount > APPROVAL_THRESHOLD && ['APPROVED', 'PAID'].includes(newStatus) && user?.role !== ROLES.STATION_MANAGER) {
+      toast.error('Only the Station Manager can approve high-value expenses above LSL 5,000');
+      return;
+    }
+
     try {
       await expenseService.updateExpense(id, { status: newStatus });
       toast.success(`Status updated to ${newStatus}`);
@@ -270,9 +287,11 @@ const Expenses = () => {
           <h1 className="page-h">Expense Tracking</h1>
           <p className="page-sub">Monitor and control operational expenses</p>
         </div>
-        <button className="btn btn-gold" onClick={() => { setEditMode(false); setForm(blank); setAddOpen(true); }}>
-          <Plus size={15} /> New Expense
-        </button>
+        {user?.role !== ROLES.AUDITOR && (
+          <button className="btn btn-gold" onClick={() => { setEditMode(false); setForm(blank); setAddOpen(true); }}>
+            <Plus size={15} /> New Expense
+          </button>
+        )}
       </div>
 
       <div className="g4" style={{ marginBottom: 20 }}>
@@ -395,19 +414,29 @@ const Expenses = () => {
                 <td>
                   <select
                     value={e.status}
-                    onChange={(val) => updateStatus(e.id, val.target.value)}
+                    onChange={(val) => updateStatus(e.id, val.target.value, e)}
                     className="badge"
                     style={getStatusStyle(e.status)}
+                    disabled={user?.role === ROLES.AUDITOR}
                   >
                     {STATUSES.map(s => (
-                      <option key={s} value={s} style={{ background: 'var(--bg-surface)' }}>{s}</option>
+                      <option key={s} value={s} disabled={!canUpdateStatus(e, s)}>{s}</option>
                     ))}
                   </select>
+                  {e.amount > APPROVAL_THRESHOLD && user?.role !== ROLES.STATION_MANAGER && (
+                    <div style={{ marginTop: 4, color: '#f97316', fontSize: '0.72rem' }}>
+                      Requires Station Manager approval
+                    </div>
+                  )}
                 </td>
                 <td>
                   <div style={{ display: 'flex', gap: 6 }}>
-                    <button className="icon-btn" onClick={() => editExpense(e)}><Edit size={14} /></button>
-                    <button className="icon-btn" onClick={() => deleteExpense(e.id)}><Trash2 size={14} /></button>
+                    {user?.role !== ROLES.AUDITOR && (
+                      <>
+                        <button className="icon-btn" onClick={() => editExpense(e)}><Edit size={14} /></button>
+                        <button className="icon-btn" onClick={() => deleteExpense(e.id)}><Trash2 size={14} /></button>
+                      </>
+                    )}
                   </div>
                 </td>
               </tr>

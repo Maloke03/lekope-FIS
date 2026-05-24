@@ -108,6 +108,19 @@ export const payrollService = {
       throw error;
     }
   },
+
+  async approvePayrollRun() {
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await axios.post(`${API_URL}/payroll/approve-run`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error approving payroll run:', error);
+      throw error;
+    }
+  },
   
   // Delete payroll record
   async deletePayroll(id) {

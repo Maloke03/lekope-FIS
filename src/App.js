@@ -27,6 +27,7 @@ import FinReports from './pages/FinReports';
 import Analytics from './pages/Analytics';
 import Users from './pages/Users';
 import AuditLog from './pages/AuditLog';
+import RateCard from './pages/RateCard';
 import LandingPage from './pages/LandingPage';
 
 const Layout = ({ children }) => {
@@ -135,6 +136,16 @@ function App() {
               <Layout>
                 <RoleBasedRoute allowedRoles={PAGE_ACCESS['/bookings']}>
                   <Bookings />
+                </RoleBasedRoute>
+              </Layout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/rate-card" element={
+            <ProtectedRoute>
+              <Layout>
+                <RoleBasedRoute allowedRoles={PAGE_ACCESS['/rate-card']}>
+                  <RateCard />
                 </RoleBasedRoute>
               </Layout>
             </ProtectedRoute>

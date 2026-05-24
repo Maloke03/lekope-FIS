@@ -31,6 +31,7 @@ const Sidebar = ({ isOpen, closeSidebar }) => {
         { label:'Ad Contracts & Airtime', path:'/adcontracts', icon:Megaphone, roles: PAGE_ACCESS['/adcontracts'] },
         { label:'Advertisers',            path:'/advertisers', icon:Users,      roles: PAGE_ACCESS['/advertisers'] },
         { label:'Bookings',               path:'/bookings',    icon:Calendar,   roles: PAGE_ACCESS['/bookings'] },
+        { label:'Rate Card',              path:'/rate-card',   icon:FileText,   roles: PAGE_ACCESS['/rate-card'] },
         { label:'Payroll Management',     path:'/payroll',      icon:Users,      roles: PAGE_ACCESS['/payroll'] },
         { label:'Tax & Compliance',       path:'/tax',          icon:ShieldCheck,roles: PAGE_ACCESS['/tax'] },
         { label:'Asset Register',         path:'/assets',       icon:Database,   roles: PAGE_ACCESS['/assets'] },

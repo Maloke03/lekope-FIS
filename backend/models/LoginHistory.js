@@ -15,9 +15,18 @@ const loginHistorySchema = new mongoose.Schema({
   role: String,
   status: {
     type: String,
-    enum: ['SUCCESS', 'FAILED'],
-    required: true
+    enum: ['SUCCESS', 'FAILED', 'INFO'],
+    default: 'INFO'
   },
+  actionType: {
+    type: String,
+    default: 'LOGIN'
+  },
+  targetType: {
+    type: String,
+    default: 'AUTH'
+  },
+  details: String,
   reason: String,
   ipAddress: String,
   userAgent: String,

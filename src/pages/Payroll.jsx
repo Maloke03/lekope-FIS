@@ -5,7 +5,7 @@ import { payrollService } from '../services/payrollService';
 import { formatCurrency } from '../utils/invoiceUtils';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth, ROLES } from '../contexts/AuthContext';
 
 const DEPT_COLORS = { 
   Broadcasting: '#f5c518', 
@@ -165,14 +165,35 @@ const Payroll = () => {
     setAddOpen(true);
   };
 
-  const markAsPaid = async (id) => {
+  const updatePayrollStatus = async (id, status) => {
+    if (status === 'Approved' && user?.role !== ROLES.STATION_MANAGER) {
+      toast.error('Only the Station Manager may approve payroll items.');
+      return;
+    }
+
     try {
-      await payrollService.updateStatus(id, 'Paid');
-      toast.success('Employee marked as paid');
+      await payrollService.updateStatus(id, status);
+      toast.success(`Payroll status updated to ${status}`);
       loadData();
     } catch (error) {
-      console.error('Error marking as paid:', error);
-      toast.error('Failed to update status');
+      console.error('Error updating payroll status:', error);
+      toast.error('Failed to update payroll status');
+    }
+  };
+
+  const markAsPaid = async (id) => {
+    await updatePayrollStatus(id, 'Paid');
+  };
+
+  const approvePayrollRun = async () => {
+    if (!window.confirm('Approve the current payroll run and allow finance to disburse salaries?')) return;
+    try {
+      await payrollService.approvePayrollRun();
+      toast.success('Payroll run approved successfully');
+      loadData();
+    } catch (error) {
+      console.error('Error approving payroll run:', error);
+      toast.error('Failed to approve payroll run');
     }
   };
 
@@ -280,6 +301,11 @@ const Payroll = () => {
           </div>
           {user?.role !== 'AUDITOR' && (
             <>
+              {user?.role === ROLES.STATION_MANAGER && pending > 0 && (
+                <button className="btn btn-ghost btn-sm" onClick={approvePayrollRun}>
+                  <CheckCircle size={14} /> Approve Payroll Run
+                </button>
+              )}
               <button className="btn btn-ghost btn-sm" onClick={markAllPaid}>
                 <CheckCircle size={14} /> Mark All Paid
               </button>
@@ -387,7 +413,8 @@ const Payroll = () => {
                   <td>
                     <select
                       value={p.status}
-                      onChange={(e) => markAsPaid(p.id)}
+                      onChange={(e) => updatePayrollStatus(p.id, e.target.value)}
+                      disabled={user?.role === ROLES.AUDITOR}
                       style={{
                         padding: '4px 8px',
                         borderRadius: 4,
@@ -396,10 +423,14 @@ const Payroll = () => {
                         color: p.status === 'Paid' ? '#22c55e' : '#f97316',
                         fontSize: '0.75rem',
                         fontWeight: 600,
-                        cursor: 'pointer'
+                        cursor: user?.role === ROLES.AUDITOR ? 'not-allowed' : 'pointer'
                       }}
                     >
                       <option value="Pending" style={{ background: '#fff', color: '#f97316' }}>Pending</option>
+                      {p.status === 'Approved' && <option value="Approved" style={{ background: '#fff', color: '#2563eb' }}>Approved</option>}
+                      {user?.role === ROLES.STATION_MANAGER && p.status !== 'Approved' && (
+                        <option value="Approved" style={{ background: '#fff', color: '#2563eb' }}>Approved</option>
+                      )}
                       <option value="Paid" style={{ background: '#fff', color: '#22c55e' }}>Paid</option>
                     </select>
                   </td>
