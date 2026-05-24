@@ -39,6 +39,17 @@ const invoiceSchema = new mongoose.Schema({
   }],
   payments: [paymentSchema],
   blockchainLedgerTip: String,
+  blockchainAnchor: {
+    status: { type: String, enum: ['NOT_ANCHORED', 'CONFIRMED', 'SUBMITTED', 'FAILED'], default: 'NOT_ANCHORED' },
+    network: String,
+    chainId: Number,
+    txHash: String,
+    explorerUrl: String,
+    from: String,
+    anchoredHash: String,
+    anchoredAt: Date,
+    error: String
+  },
   writeOffReason: String,
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   createdAt: { type: Date, default: Date.now },

@@ -1558,6 +1558,13 @@ body {
   color: #86efac;
 }
 
+.ledger-badge.anchored {
+  background: rgba(96, 165, 250, 0.15);
+  border: 1px solid rgba(96, 165, 250, 0.24);
+  color: #bfdbfe;
+  text-decoration: none;
+}
+
 .ledger-badge.empty {
   background: rgba(139, 160, 188, 0.1);
   border: 1px solid rgba(139, 160, 188, 0.14);

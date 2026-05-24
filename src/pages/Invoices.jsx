@@ -120,6 +120,18 @@ const Invoices = () => {
     }
   };
 
+  const anchorLedger = async (id) => {
+    try {
+      const updated = await invoiceService.anchorLedger(id);
+      const anchor = updated.blockchainAnchor;
+      toast.success(anchor?.txHash ? `Anchored to ${anchor.network}` : 'Ledger anchor submitted');
+      loadInvoices();
+    } catch (error) {
+      const message = error.response?.data?.error || 'Failed to anchor ledger';
+      toast.error(message);
+    }
+  };
+
   const writeOffInvoice = async (id, reason) => {
     try {
       const updated = await invoiceService.writeOff(id, reason);
@@ -321,11 +333,17 @@ const Invoices = () => {
                   <td className="num paid">{formatCurrency(inv.paidAmount || 0)}</td>
                   <td className={balance > 0 ? 'num balance outstanding' : 'num balance settled'}>{formatCurrency(balance)}</td>
                   <td>
-                    {inv.blockchainLedgerTip ? (
-                      <span className="badge ledger-badge secured" title={inv.blockchainLedgerTip}>Secured</span>
-                    ) : (
-                      <span className="badge ledger-badge empty">None</span>
-                    )}
+                      {inv.blockchainLedgerTip ? (
+                        inv.blockchainAnchor?.txHash ? (
+                          <a className="badge ledger-badge anchored" href={inv.blockchainAnchor.explorerUrl} target="_blank" rel="noreferrer" title={inv.blockchainAnchor.txHash}>
+                            Anchored
+                          </a>
+                        ) : (
+                          <span className="badge ledger-badge secured" title={inv.blockchainLedgerTip}>Secured</span>
+                        )
+                      ) : (
+                        <span className="badge ledger-badge empty">None</span>
+                      )}
                   </td>
                   <td>
                     <span className="badge" style={getStatusStyle(inv.status)}>
@@ -341,9 +359,10 @@ const Invoices = () => {
                       onRecordPayment={(inv) => {
                         setSelectedInvoice(inv);
                         setShowPaymentModal(true);
-                      }}
-                      onVerifyLedger={verifyLedger}
-                    />
+                        }}
+                        onVerifyLedger={verifyLedger}
+                        onAnchorLedger={anchorLedger}
+                      />
                   </td>
                 </tr>
               );

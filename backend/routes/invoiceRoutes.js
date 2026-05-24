@@ -7,6 +7,7 @@ const {
   updateInvoice,
   recordPayment,
   verifyInvoiceLedger,
+  anchorInvoiceLedger,
   writeOffInvoice,
   deleteInvoice
 } = require('../controllers/invoiceController');
@@ -34,6 +35,7 @@ router.put('/:id', (req, res, next) => {
 }, updateInvoice);
 
 // Routes for recording payments and write-off (finance for approve actions)
+router.post('/:id/ledger/anchor', canApproveInvoices, anchorInvoiceLedger);
 router.post('/:id/payments', canApproveInvoices, recordPayment);
 router.post('/:id/writeoff', canApproveInvoices, writeOffInvoice);
 
