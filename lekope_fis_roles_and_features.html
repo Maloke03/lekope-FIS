@@ -1,0 +1,222 @@
+
+<h2 class="sr-only">Lekope FM FIS — all user roles and their features</h2>
+<style>
+.role-card { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 1rem 1.25rem; margin-bottom: 1rem; }
+.role-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 0.5px solid var(--color-border-tertiary); }
+.avatar { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 500; flex-shrink: 0; }
+.role-title { font-size: 15px; font-weight: 500; color: var(--color-text-primary); margin: 0; }
+.role-sub { font-size: 12px; color: var(--color-text-secondary); margin: 2px 0 0; }
+.feat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.feat { background: var(--color-background-secondary); border-radius: 6px; padding: 7px 10px; }
+.feat-name { font-size: 12px; font-weight: 500; color: var(--color-text-primary); margin: 0 0 2px; }
+.feat-desc { font-size: 11px; color: var(--color-text-secondary); margin: 0; }
+.perm-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+.pill { font-size: 11px; padding: 3px 9px; border-radius: 10px; font-weight: 500; }
+.pill-yes { background: var(--color-background-success); color: var(--color-text-success); }
+.pill-no  { background: var(--color-background-secondary); color: var(--color-text-tertiary); }
+.pill-view { background: var(--color-background-info); color: var(--color-text-info); }
+.section-label { font-size: 11px; font-weight: 500; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.06em; margin: 0 0 6px; }
+</style>
+
+<div class="role-card">
+  <div class="role-header">
+    <div class="avatar" style="background:var(--color-background-info);color:var(--color-text-info);">SM</div>
+    <div>
+      <p class="role-title">Station manager</p>
+      <p class="role-sub">Highest access — full read + approve + configure</p>
+    </div>
+  </div>
+  <p class="section-label">What they can do</p>
+  <div class="feat-grid">
+    <div class="feat"><p class="feat-name">View all financial data</p><p class="feat-desc">Revenue, expenses, payroll, budgets — full history</p></div>
+    <div class="feat"><p class="feat-name">Approve expenses</p><p class="feat-desc">Sign off on items above M5,000 threshold</p></div>
+    <div class="feat"><p class="feat-name">Approve payroll runs</p><p class="feat-desc">Confirm monthly payroll before salaries are released</p></div>
+    <div class="feat"><p class="feat-name">Set & edit budgets</p><p class="feat-desc">Allocate budgets per department per month</p></div>
+    <div class="feat"><p class="feat-name">Export any report</p><p class="feat-desc">PDF & Excel — income statement, cash flow, advertiser summary</p></div>
+    <div class="feat"><p class="feat-name">Manage users & roles</p><p class="feat-desc">Create accounts, assign roles, reset passwords</p></div>
+    <div class="feat"><p class="feat-name">Configure rate card</p><p class="feat-desc">Update advertising slot prices in settings</p></div>
+    <div class="feat"><p class="feat-name">View audit log</p><p class="feat-desc">See who did what and when across the whole system</p></div>
+  </div>
+  <div class="perm-row">
+    <span class="pill pill-yes">Full dashboard</span>
+    <span class="pill pill-yes">All reports</span>
+    <span class="pill pill-yes">User management</span>
+    <span class="pill pill-yes">Approve transactions</span>
+    <span class="pill pill-yes">System settings</span>
+  </div>
+</div>
+
+<div class="role-card">
+  <div class="role-header">
+    <div class="avatar" style="background:var(--color-background-success);color:var(--color-text-success);">FO</div>
+    <div>
+      <p class="role-title">Finance officer</p>
+      <p class="role-sub">Core operator — enters, processes, and reconciles all money</p>
+    </div>
+  </div>
+  <p class="section-label">What they can do</p>
+  <div class="feat-grid">
+    <div class="feat"><p class="feat-name">Create & send invoices</p><p class="feat-desc">Generate PDF invoices, email or WhatsApp to advertiser</p></div>
+    <div class="feat"><p class="feat-name">Record payments</p><p class="feat-desc">Mark invoices as paid, partial, or write off bad debt</p></div>
+    <div class="feat"><p class="feat-name">Enter expenses</p><p class="feat-desc">Log all operational costs with category and receipt upload</p></div>
+    <div class="feat"><p class="feat-name">Run payroll</p><p class="feat-desc">Initiate monthly payroll — sends to manager for approval</p></div>
+    <div class="feat"><p class="feat-name">Manage bookings</p><p class="feat-desc">Create & edit advertising slot bookings for all clients</p></div>
+    <div class="feat"><p class="feat-name">View & export reports</p><p class="feat-desc">Generate income, cash flow, and advertiser reports</p></div>
+    <div class="feat"><p class="feat-name">Reconcile bank</p><p class="feat-desc">Match system records to bank statement entries</p></div>
+    <div class="feat"><p class="feat-name">Manage advertisers</p><p class="feat-desc">Add, edit, and view all client records and payment history</p></div>
+  </div>
+  <div class="perm-row">
+    <span class="pill pill-yes">Full bookings</span>
+    <span class="pill pill-yes">Full invoices</span>
+    <span class="pill pill-yes">Full expenses</span>
+    <span class="pill pill-yes">Payroll (initiate)</span>
+    <span class="pill pill-no">Cannot approve payroll</span>
+    <span class="pill pill-no">No user management</span>
+  </div>
+</div>
+
+<div class="role-card">
+  <div class="role-header">
+    <div class="avatar" style="background:var(--color-background-warning);color:var(--color-text-warning);">MK</div>
+    <div>
+      <p class="role-title">Marketing officer</p>
+      <p class="role-sub">Client-facing — manages advertiser relationships and bookings only</p>
+    </div>
+  </div>
+  <p class="section-label">What they can do</p>
+  <div class="feat-grid">
+    <div class="feat"><p class="feat-name">Add & edit advertisers</p><p class="feat-desc">Create new client profiles, update contacts</p></div>
+    <div class="feat"><p class="feat-name">Create bookings</p><p class="feat-desc">Book advertising slots for clients from the rate card</p></div>
+    <div class="feat"><p class="feat-name">View invoice status</p><p class="feat-desc">See whether a client's invoices are paid, partial, or overdue</p></div>
+    <div class="feat"><p class="feat-name">Send payment reminders</p><p class="feat-desc">Trigger WhatsApp or email reminder to overdue clients</p></div>
+    <div class="feat"><p class="feat-name">View booking history</p><p class="feat-desc">See all past and future bookings per client</p></div>
+    <div class="feat"><p class="feat-name">View own activity</p><p class="feat-desc">See bookings and advertisers they have managed</p></div>
+  </div>
+  <div class="perm-row">
+    <span class="pill pill-yes">Advertisers</span>
+    <span class="pill pill-yes">Bookings</span>
+    <span class="pill pill-view">View invoices only</span>
+    <span class="pill pill-no">Cannot edit invoices</span>
+    <span class="pill pill-no">No expenses</span>
+    <span class="pill pill-no">No payroll</span>
+    <span class="pill pill-no">No reports</span>
+  </div>
+</div>
+
+<div class="role-card">
+  <div class="role-header">
+    <div class="avatar" style="background:var(--color-background-secondary);color:var(--color-text-secondary);">ST</div>
+    <div>
+      <p class="role-title">Staff member (presenter / technician)</p>
+      <p class="role-sub">Self-service only — sees their own payslips and nothing else</p>
+    </div>
+  </div>
+  <p class="section-label">What they can do</p>
+  <div class="feat-grid">
+    <div class="feat"><p class="feat-name">View own payslips</p><p class="feat-desc">Download monthly payslip PDF for current and past months</p></div>
+    <div class="feat"><p class="feat-name">View own leave balance</p><p class="feat-desc">Check remaining leave days if HR module is added</p></div>
+  </div>
+  <div class="perm-row">
+    <span class="pill pill-view">Own payslips only</span>
+    <span class="pill pill-no">No financial data</span>
+    <span class="pill pill-no">No client data</span>
+    <span class="pill pill-no">No reports</span>
+  </div>
+</div>
+
+<div class="role-card">
+  <div class="role-header">
+    <div class="avatar" style="background:var(--color-background-danger);color:var(--color-text-danger);">AU</div>
+    <div>
+      <p class="role-title">Auditor (read-only)</p>
+      <p class="role-sub">External or internal — sees everything, changes nothing</p>
+    </div>
+  </div>
+  <p class="section-label">What they can do</p>
+  <div class="feat-grid">
+    <div class="feat"><p class="feat-name">View all transactions</p><p class="feat-desc">Full history of income, expenses, payroll — no editing</p></div>
+    <div class="feat"><p class="feat-name">View audit log</p><p class="feat-desc">See every action logged in the system with timestamps</p></div>
+    <div class="feat"><p class="feat-name">Export reports</p><p class="feat-desc">Download income statement, cash flow, advertiser report</p></div>
+    <div class="feat"><p class="feat-name">View advertiser records</p><p class="feat-desc">See client list, contracts, invoice history — read only</p></div>
+  </div>
+  <div class="perm-row">
+    <span class="pill pill-view">View all data</span>
+    <span class="pill pill-view">Export reports</span>
+    <span class="pill pill-no">Cannot create anything</span>
+    <span class="pill pill-no">Cannot approve anything</span>
+  </div>
+</div>
+
+<div style="margin-top:1.5rem;">
+  <p class="section-label">All features in the system</p>
+  <div class="feat-grid" style="grid-template-columns:1fr 1fr 1fr;">
+    <div class="feat"><p class="feat-name">Advertiser management</p><p class="feat-desc">Client profiles, contacts, contracts</p></div>
+    <div class="feat"><p class="feat-name">Booking management</p><p class="feat-desc">Slot bookings, auto rate calculation</p></div>
+    <div class="feat"><p class="feat-name">Invoice generation</p><p class="feat-desc">PDF invoices, WhatsApp/email delivery</p></div>
+    <div class="feat"><p class="feat-name">Payment recording</p><p class="feat-desc">Mark paid, partial, overdue — M-Pesa integration</p></div>
+    <div class="feat"><p class="feat-name">Expense management</p><p class="feat-desc">Categories, receipt upload, approval workflow</p></div>
+    <div class="feat"><p class="feat-name">Payroll processing</p><p class="feat-desc">PAYE deductions, net pay, payslip PDF</p></div>
+    <div class="feat"><p class="feat-name">Budget planning</p><p class="feat-desc">Monthly budgets per department, vs actual</p></div>
+    <div class="feat"><p class="feat-name">Financial reports</p><p class="feat-desc">Income statement, cash flow, advertiser summary</p></div>
+    <div class="feat"><p class="feat-name">Audit log</p><p class="feat-desc">Every action logged: who, what, when</p></div>
+    <div class="feat"><p class="feat-name">User management</p><p class="feat-desc">Create accounts, assign roles, reset passwords</p></div>
+    <div class="feat"><p class="feat-name">Rate card config</p><p class="feat-desc">Update slot prices directly in settings</p></div>
+    <div class="feat"><p class="feat-name">Payment reminders</p><p class="feat-desc">Automated alerts for overdue invoices</p></div>
+  </div>
+</div>
+
+<div style="margin-top:1rem; padding:1rem; background:var(--color-background-secondary); border-radius:var(--border-radius-md);">
+  <p class="section-label" style="margin-bottom:8px;">Quick permissions summary</p>
+  <div style="overflow-x:auto;">
+    <table style="width:100%;font-size:11px;border-collapse:collapse;table-layout:fixed;">
+      <thead>
+        <tr style="border-bottom:0.5px solid var(--color-border-tertiary);">
+          <th style="text-align:left;padding:5px 8px;color:var(--color-text-secondary);font-weight:500;width:160px;">Feature</th>
+          <th style="padding:5px 4px;color:var(--color-text-secondary);font-weight:500;width:70px;text-align:center;">Manager</th>
+          <th style="padding:5px 4px;color:var(--color-text-secondary);font-weight:500;width:70px;text-align:center;">Finance</th>
+          <th style="padding:5px 4px;color:var(--color-text-secondary);font-weight:500;width:70px;text-align:center;">Marketing</th>
+          <th style="padding:5px 4px;color:var(--color-text-secondary);font-weight:500;width:60px;text-align:center;">Staff</th>
+          <th style="padding:5px 4px;color:var(--color-text-secondary);font-weight:500;width:60px;text-align:center;">Auditor</th>
+        </tr>
+      </thead>
+      <tbody id="perm-table"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+const rows = [
+  ["Dashboard",          "Full","Full","Limited","No","View"],
+  ["Advertisers",        "Full","Full","Full","No","View"],
+  ["Bookings",           "Full","Full","Full","No","View"],
+  ["Invoices",           "Full","Full","View","No","View"],
+  ["Expenses",           "Full","Full","No","No","View"],
+  ["Payroll",            "Approve","Initiate","No","Own only","View"],
+  ["Budget planning",    "Full","View","No","No","View"],
+  ["Reports & export",   "Full","Full","No","No","Full"],
+  ["Audit log",          "Full","No","No","No","View"],
+  ["User management",    "Full","No","No","No","No"],
+  ["Rate card settings", "Full","No","No","No","No"],
+];
+const colors = {
+  "Full":"var(--color-text-success)","Approve":"var(--color-text-success)",
+  "Initiate":"var(--color-text-warning)","Limited":"var(--color-text-warning)",
+  "View":"var(--color-text-info)","Own only":"var(--color-text-info)",
+  "No":"var(--color-text-tertiary)"
+};
+const tb = document.getElementById('perm-table');
+rows.forEach(r => {
+  const tr = document.createElement('tr');
+  tr.style.borderBottom = '0.5px solid var(--color-border-tertiary)';
+  r.forEach((cell,i) => {
+    const td = document.createElement('td');
+    td.style.padding = '5px ' + (i===0?'8px':'4px');
+    td.style.textAlign = i===0 ? 'left' : 'center';
+    td.style.color = i===0 ? 'var(--color-text-primary)' : (colors[cell] || 'var(--color-text-tertiary)');
+    td.style.fontWeight = i===0 ? '500' : '400';
+    td.textContent = cell;
+    tr.appendChild(td);
+  });
+  tb.appendChild(tr);
+});
+</script>

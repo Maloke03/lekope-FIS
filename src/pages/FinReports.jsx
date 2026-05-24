@@ -32,6 +32,22 @@ const FinReports = () => {
     }
   };
 
+  const exportReports = () => {
+    if (!reportData) return;
+
+    const jsonData = JSON.stringify(reportData, null, 2);
+    const blob = new Blob([jsonData], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+
+    link.href = url;
+    link.download = `financial-reports-${new Date().toISOString().slice(0,10)}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   useEffect(() => {
     loadData();
   }, []);
@@ -188,7 +204,9 @@ const FinReports = () => {
           <button className="btn btn-ghost btn-sm" onClick={loadData} disabled={loading} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <RefreshCw size={14} /> Reload
           </button>
-          <button className="btn btn-gold"><Download size={14} />Export All</button>
+          <button className="btn btn-gold" onClick={exportReports} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Download size={14} />Export All
+          </button>
         </div>
       </div>
 

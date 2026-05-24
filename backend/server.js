@@ -362,7 +362,7 @@ app.post('/api/verify-token', async (req, res) => {
 });
 
 // ============ USER ROUTES ============
-app.get('/api/users', async (req, res) => {
+app.get('/api/users', protect, hasRole('STATION_MANAGER'), async (req, res) => {
   try {
     const users = await User.find({}, '-password');
     res.json(users);
@@ -371,7 +371,7 @@ app.get('/api/users', async (req, res) => {
   }
 });
 
-app.get('/api/users/:id', async (req, res) => {
+app.get('/api/users/:id', protect, hasRole('STATION_MANAGER'), async (req, res) => {
   try {
     const user = await User.findById(req.params.id, '-password');
     if (!user) return res.status(404).json({ error: 'User not found' });
@@ -381,7 +381,7 @@ app.get('/api/users/:id', async (req, res) => {
   }
 });
 
-app.put('/api/users/:id', async (req, res) => {
+app.put('/api/users/:id', protect, hasRole('STATION_MANAGER'), async (req, res) => {
   try {
     const { name, role, isActive } = req.body;
     const normalizedRole = role ? normalizeRole(role) : undefined;
@@ -404,7 +404,7 @@ app.put('/api/users/:id', async (req, res) => {
   }
 });
 
-app.delete('/api/users/:id', async (req, res) => {
+app.delete('/api/users/:id', protect, hasRole('STATION_MANAGER'), async (req, res) => {
   try {
     await User.findByIdAndDelete(req.params.id);
     res.json({ message: 'User deleted successfully' });
@@ -413,7 +413,7 @@ app.delete('/api/users/:id', async (req, res) => {
   }
 });
 
-app.get('/api/login-history', protect, hasRole('STATION_MANAGER'), async (req, res) => {
+app.get('/api/login-history', protect, hasRole('STATION_MANAGER', 'AUDITOR'), async (req, res) => {
   try {
     const history = await LoginHistory.find({})
       .sort({ createdAt: -1 })

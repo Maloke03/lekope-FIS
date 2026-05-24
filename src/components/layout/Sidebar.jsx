@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth, ROLES, PAGE_ACCESS } from '../../contexts/AuthContext';
 import {
   LayoutDashboard, TrendingUp, TrendingDown, FileText,
-  BarChart2, PieChart, Radio, Users, ShieldCheck,
+  BarChart2, PieChart, Clock, Radio, Users, ShieldCheck,
   Database, Megaphone, Calendar, LogOut, UserCircle,
 } from 'lucide-react';
 
@@ -41,6 +41,13 @@ const Sidebar = ({ isOpen, closeSidebar }) => {
       items: [
         { label:'Financial Reports', path:'/reports',   icon:BarChart2, roles: PAGE_ACCESS['/reports'] },
         { label:'Analytics',         path:'/analytics', icon:PieChart,  roles: PAGE_ACCESS['/analytics'] },
+        { label:'Audit Log',         path:'/audit-log', icon:Clock,    roles: PAGE_ACCESS['/audit-log'] },
+      ],
+    },
+    {
+      label: 'Administration',
+      items: [
+        { label:'User Management', path:'/users', icon:UserCircle, roles: PAGE_ACCESS['/users'] },
       ],
     },
   ];

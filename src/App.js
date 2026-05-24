@@ -25,6 +25,8 @@ import Assets from './pages/Assets';
 import BankReconciliation from './pages/BankReconciliation';
 import FinReports from './pages/FinReports';
 import Analytics from './pages/Analytics';
+import Users from './pages/Users';
+import AuditLog from './pages/AuditLog';
 import LandingPage from './pages/LandingPage';
 
 const Layout = ({ children }) => {
@@ -173,6 +175,26 @@ function App() {
               <Layout>
                 <RoleBasedRoute allowedRoles={PAGE_ACCESS['/assets']}>
                   <Assets />
+                </RoleBasedRoute>
+              </Layout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/users" element={
+            <ProtectedRoute>
+              <Layout>
+                <RoleBasedRoute allowedRoles={PAGE_ACCESS['/users']}>
+                  <Users />
+                </RoleBasedRoute>
+              </Layout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/audit-log" element={
+            <ProtectedRoute>
+              <Layout>
+                <RoleBasedRoute allowedRoles={PAGE_ACCESS['/audit-log']}>
+                  <AuditLog />
                 </RoleBasedRoute>
               </Layout>
             </ProtectedRoute>
