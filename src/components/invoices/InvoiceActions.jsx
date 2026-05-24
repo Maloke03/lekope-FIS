@@ -1,9 +1,9 @@
 // src/components/invoices/InvoiceActions.jsx
 import React, { useState } from 'react';
-import { Eye, Send, DollarSign, FileText, Trash2, Printer, AlertTriangle, CheckCircle, ShieldCheck, Link } from 'lucide-react';
+import { Eye, Send, DollarSign, FileText, Trash2, Printer, AlertTriangle, CheckCircle, ShieldCheck } from 'lucide-react';
 import { formatCurrency, generateInvoicePDF, generateWhatsAppMessage, sendViaEmailClient, printInvoice } from '../../utils/invoiceUtils';
 
-const InvoiceActions = ({ invoice, onStatusChange, onDelete, onRecordPayment, onVerifyLedger, onAnchorLedger, readOnly = false }) => {
+const InvoiceActions = ({ invoice, onStatusChange, onDelete, onRecordPayment, onVerifyLedger, readOnly = false }) => {
   const [showWriteOff, setShowWriteOff] = useState(false);
   const [writeOffReason, setWriteOffReason] = useState('');
 
@@ -55,15 +55,6 @@ const InvoiceActions = ({ invoice, onStatusChange, onDelete, onRecordPayment, on
       });
     }
 
-    if (!readOnly && invoice.blockchainLedgerTip && !invoice.blockchainAnchor?.txHash && onAnchorLedger) {
-      actions.push({
-        icon: Link,
-        label: 'Anchor',
-        onClick: () => onAnchorLedger(invoice.id),
-        color: 'var(--blue)'
-      });
-    }
-    
     if (invoice.status !== 'PAID' && invoice.status !== 'WRITTEN_OFF') {
       if (invoice.clientEmail) {
         actions.push({ icon: Send, label: 'Email', onClick: handleEmail, color: '#4a90e2' });

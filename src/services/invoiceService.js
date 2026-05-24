@@ -72,20 +72,6 @@ export const invoiceService = {
     }
   },
 
-  // Anchor the verified ledger tip to the configured public testnet
-  async anchorLedger(id) {
-    try {
-      const token = localStorage.getItem('authToken');
-      const response = await axios.post(`${API_URL}/invoices/${id}/ledger/anchor`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      return response.data;
-    } catch (error) {
-      console.error('Error anchoring invoice ledger:', error);
-      throw error;
-    }
-  },
-  
   // Mark as write-off
   async writeOff(id, reason) {
     try {

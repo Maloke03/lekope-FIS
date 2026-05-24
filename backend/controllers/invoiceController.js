@@ -1,6 +1,5 @@
 const Invoice = require('../models/Invoice');
 const { createPaymentProof, verifyPaymentLedger } = require('../utils/blockchainLedger');
-const { anchorProofHash, getAnchorStatus } = require('../utils/publicChainAnchor');
 
 // Get all invoices
 const getInvoices = async (req, res) => {
@@ -122,44 +121,6 @@ const verifyInvoiceLedger = async (req, res) => {
   }
 };
 
-// Anchor invoice ledger tip to a configured public testnet
-const anchorInvoiceLedger = async (req, res) => {
-  try {
-    const invoice = await Invoice.findOne({ id: req.params.id });
-    if (!invoice) {
-      return res.status(404).json({ error: 'Invoice not found' });
-    }
-
-    const ledger = verifyPaymentLedger(invoice);
-    if (!ledger.valid || !invoice.blockchainLedgerTip) {
-      return res.status(400).json({ error: 'Invoice ledger must be valid before public anchoring' });
-    }
-
-    if (invoice.blockchainAnchor?.txHash && invoice.blockchainAnchor.anchoredHash === invoice.blockchainLedgerTip) {
-      return res.json(invoice);
-    }
-
-    const anchor = await anchorProofHash({
-      proofHash: invoice.blockchainLedgerTip,
-      memo: {
-        invoiceId: invoice.id,
-        paymentCount: ledger.paymentCount,
-      },
-    });
-
-    invoice.blockchainAnchor = anchor;
-    await invoice.save();
-
-    res.json(invoice);
-  } catch (error) {
-    console.error('Error anchoring invoice ledger:', error);
-    res.status(error.code === 'ANCHOR_NOT_CONFIGURED' ? 400 : 500).json({
-      error: error.message || 'Failed to anchor invoice ledger',
-      anchorStatus: getAnchorStatus(),
-    });
-  }
-};
-
 // Write off invoice
 const writeOffInvoice = async (req, res) => {
   try {
@@ -199,7 +160,6 @@ module.exports = {
   updateInvoice,
   recordPayment,
   verifyInvoiceLedger,
-  anchorInvoiceLedger,
   writeOffInvoice,
   deleteInvoice
 };
