@@ -1,4 +1,5 @@
 const Invoice = require('../models/Invoice');
+const { createPaymentProof, verifyPaymentLedger } = require('../utils/blockchainLedger');
 
 // Get all invoices
 const getInvoices = async (req, res) => {
@@ -65,16 +66,30 @@ const recordPayment = async (req, res) => {
     }
     
     const { amount, method, reference, date, notes } = req.body;
-    
-    invoice.payments.push({ 
-      amount, 
-      method, 
-      reference, 
-      date, 
+    const paymentAmount = Number(amount);
+
+    if (!Number.isFinite(paymentAmount) || paymentAmount <= 0) {
+      return res.status(400).json({ error: 'Payment amount must be greater than zero' });
+    }
+
+    const remainingBalance = invoice.amount - (invoice.paidAmount || 0);
+    if (paymentAmount > remainingBalance) {
+      return res.status(400).json({ error: 'Payment amount cannot exceed remaining balance' });
+    }
+
+    const payment = {
+      amount: paymentAmount,
+      method,
+      reference,
+      date: date ? new Date(date) : new Date(),
       notes,
-      recordedBy: req.user._id 
-    });
-    invoice.paidAmount = (invoice.paidAmount || 0) + amount;
+      recordedBy: req.user._id
+    };
+
+    payment.blockchainProof = createPaymentProof({ invoice, payment });
+    invoice.payments.push(payment);
+    invoice.blockchainLedgerTip = payment.blockchainProof.blockHash;
+    invoice.paidAmount = (invoice.paidAmount || 0) + paymentAmount;
     
     // Update status based on payment
     if (invoice.paidAmount >= invoice.amount) {
@@ -88,6 +103,21 @@ const recordPayment = async (req, res) => {
   } catch (error) {
     console.error('Error recording payment:', error);
     res.status(500).json({ error: 'Failed to record payment' });
+  }
+};
+
+// Verify invoice payment ledger
+const verifyInvoiceLedger = async (req, res) => {
+  try {
+    const invoice = await Invoice.findOne({ id: req.params.id });
+    if (!invoice) {
+      return res.status(404).json({ error: 'Invoice not found' });
+    }
+
+    res.json(verifyPaymentLedger(invoice));
+  } catch (error) {
+    console.error('Error verifying invoice ledger:', error);
+    res.status(500).json({ error: 'Failed to verify invoice ledger' });
   }
 };
 
@@ -129,6 +159,7 @@ module.exports = {
   createInvoice,
   updateInvoice,
   recordPayment,
+  verifyInvoiceLedger,
   writeOffInvoice,
   deleteInvoice
 };

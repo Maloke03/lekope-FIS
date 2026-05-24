@@ -6,7 +6,15 @@ const paymentSchema = new mongoose.Schema({
   reference: String,
   date: { type: Date, default: Date.now },
   notes: String,
-  recordedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+  recordedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  blockchainProof: {
+    algorithm: { type: String, default: 'SHA-256' },
+    payloadVersion: { type: String, default: 'payment-ledger-v1' },
+    blockIndex: Number,
+    previousHash: String,
+    blockHash: String,
+    blockTimestamp: Date
+  }
 });
 
 const invoiceSchema = new mongoose.Schema({
@@ -30,6 +38,7 @@ const invoiceSchema = new mongoose.Schema({
     amount: Number
   }],
   payments: [paymentSchema],
+  blockchainLedgerTip: String,
   writeOffReason: String,
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   createdAt: { type: Date, default: Date.now },

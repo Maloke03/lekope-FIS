@@ -6,6 +6,7 @@ const {
   createInvoice,
   updateInvoice,
   recordPayment,
+  verifyInvoiceLedger,
   writeOffInvoice,
   deleteInvoice
 } = require('../controllers/invoiceController');
@@ -17,6 +18,7 @@ router.use(protect);
 
 // Routes for viewing invoices (finance and marketing)
 router.get('/', canViewInvoices, getInvoices);
+router.get('/:id/ledger/verify', canViewInvoices, verifyInvoiceLedger);
 router.get('/:id', canViewInvoices, getInvoiceById);
 
 // Routes for creating invoices (only marketing)

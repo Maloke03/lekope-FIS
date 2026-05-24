@@ -1,9 +1,9 @@
 // src/components/invoices/InvoiceActions.jsx
 import React, { useState } from 'react';
-import { Eye, Send, DollarSign, FileText, Trash2, Printer, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Eye, Send, DollarSign, FileText, Trash2, Printer, AlertTriangle, CheckCircle, ShieldCheck } from 'lucide-react';
 import { formatCurrency, generateInvoicePDF, generateWhatsAppMessage, sendViaEmailClient, printInvoice } from '../../utils/invoiceUtils';
 
-const InvoiceActions = ({ invoice, onStatusChange, onDelete, onRecordPayment, readOnly = false }) => {
+const InvoiceActions = ({ invoice, onStatusChange, onDelete, onRecordPayment, onVerifyLedger, readOnly = false }) => {
   const [showWriteOff, setShowWriteOff] = useState(false);
   const [writeOffReason, setWriteOffReason] = useState('');
 
@@ -45,6 +45,15 @@ const InvoiceActions = ({ invoice, onStatusChange, onDelete, onRecordPayment, re
     actions.push({ icon: Eye, label: 'View', onClick: () => {}, color: 'var(--text-secondary)' });
     actions.push({ icon: FileText, label: 'PDF', onClick: handlePDFDownload, color: 'var(--gold)' });
     actions.push({ icon: Printer, label: 'Print', onClick: handlePrint, color: '#6c757d' });
+
+    if (invoice.blockchainLedgerTip && onVerifyLedger) {
+      actions.push({
+        icon: ShieldCheck,
+        label: 'Verify',
+        onClick: () => onVerifyLedger(invoice.id),
+        color: 'var(--green)'
+      });
+    }
     
     if (invoice.status !== 'PAID' && invoice.status !== 'WRITTEN_OFF') {
       if (invoice.clientEmail) {

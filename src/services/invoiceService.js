@@ -57,6 +57,20 @@ export const invoiceService = {
       throw error;
     }
   },
+
+  // Verify blockchain-style payment ledger
+  async verifyLedger(id) {
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await axios.get(`${API_URL}/invoices/${id}/ledger/verify`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error verifying invoice ledger:', error);
+      throw error;
+    }
+  },
   
   // Mark as write-off
   async writeOff(id, reason) {

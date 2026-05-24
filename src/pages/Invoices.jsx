@@ -92,12 +92,27 @@ const Invoices = () => {
   const recordPayment = async (paymentData) => {
     try {
       const updated = await invoiceService.recordPayment(selectedInvoice.id, paymentData);
-      toast.success('Payment recorded successfully');
+      const latestPayment = updated.payments?.[updated.payments.length - 1];
+      const proofHash = latestPayment?.blockchainProof?.blockHash;
+      toast.success(proofHash ? `Payment secured: ${proofHash.slice(0, 12)}...` : 'Payment recorded successfully');
       loadInvoices();
       setShowPaymentModal(false);
       window.dispatchEvent(new CustomEvent('invoicesUpdated', { detail: { invoice: updated } }));
     } catch (error) {
       toast.error('Failed to record payment');
+    }
+  };
+
+  const verifyLedger = async (id) => {
+    try {
+      const ledger = await invoiceService.verifyLedger(id);
+      if (ledger.valid) {
+        toast.success(`Ledger verified: ${ledger.ledgerTip.slice(0, 12)}...`);
+      } else {
+        toast.error('Ledger verification failed');
+      }
+    } catch (error) {
+      toast.error('Failed to verify ledger');
     }
   };
 
@@ -276,6 +291,7 @@ const Invoices = () => {
               <th>Amount</th>
               <th>Paid</th>
               <th>Balance</th>
+              <th>Ledger</th>
               <th>Status</th>
               <th>Actions</th>
             </tr>
@@ -296,6 +312,17 @@ const Invoices = () => {
                   <td style={{color:'var(--green)'}}>{formatCurrency(inv.paidAmount || 0)}</td>
                   <td style={{color: balance > 0 ? 'var(--orange)' : 'var(--green)'}}>{formatCurrency(balance)}</td>
                   <td>
+                    {inv.blockchainLedgerTip ? (
+                      <span className="badge" style={{ background: '#d4edda', color: '#155724' }} title={inv.blockchainLedgerTip}>
+                        SECURED
+                      </span>
+                    ) : (
+                      <span className="badge" style={{ background: '#e2e3e5', color: '#383d41' }}>
+                        NONE
+                      </span>
+                    )}
+                  </td>
+                  <td>
                     <span className="badge" style={getStatusStyle(inv.status)}>
                       {inv.status === 'PARTIAL' ? '⏱ PARTIAL' : inv.status}
                     </span>
@@ -310,6 +337,7 @@ const Invoices = () => {
                         setSelectedInvoice(inv);
                         setShowPaymentModal(true);
                       }}
+                      onVerifyLedger={verifyLedger}
                     />
                   </td>
                 </tr>
