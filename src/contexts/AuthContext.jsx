@@ -1,13 +1,11 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import axios from 'axios';
+import API_URL from '../config/apiConfig';
 
 const AuthContext = createContext();
 
 export const useAuth = () => useContext(AuthContext);
-
-// API URL - Change this to your deployed backend URL
-const API_URL = 'https://lekope-fis.onrender.com/api';
 
 export const ROLES = {
   STATION_MANAGER: 'STATION_MANAGER',

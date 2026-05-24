@@ -12,14 +12,13 @@ import { advertiserService } from '../services/advertiserService';
 import { payrollService } from '../services/payrollService';
 import { ROLES, useAuth } from '../contexts/AuthContext';
 import { lsl, statusStyle } from '../utils/helpers';
+import API_URL from '../config/apiConfig';
 import dashboardAccent from '../images/landing-hero.jpg';
 import financeDash1 from '../images/finance_dash1.jpg';
 import financeDash2 from '../images/finance_dash2.jpg';
 import financeDash3 from '../images/finance_dash3.jpg';
 
 Chart.register(...registerables);
-
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 const Dashboard = () => {
   const { user } = useAuth();
