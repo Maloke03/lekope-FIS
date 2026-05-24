@@ -1,7 +1,7 @@
 {
   "files": {
     "main.css": "/lekope-FIS/static/css/main.941f58f9.css",
-    "main.js": "/lekope-FIS/static/js/main.a1f44d70.js",
+    "main.js": "/lekope-FIS/static/js/main.e389d9c0.js",
     "static/js/239.d6d92b4b.chunk.js": "/lekope-FIS/static/js/239.d6d92b4b.chunk.js",
     "static/js/977.c9b11af2.chunk.js": "/lekope-FIS/static/js/977.c9b11af2.chunk.js",
     "static/js/732.3f7c2e18.chunk.js": "/lekope-FIS/static/js/732.3f7c2e18.chunk.js",
@@ -16,13 +16,13 @@
     "static/media/home1.jpg": "/lekope-FIS/static/media/home1.1e6a1f5dc58de4a6a7b2.jpg",
     "index.html": "/lekope-FIS/index.html",
     "main.941f58f9.css.map": "/lekope-FIS/static/css/main.941f58f9.css.map",
-    "main.a1f44d70.js.map": "/lekope-FIS/static/js/main.a1f44d70.js.map",
+    "main.e389d9c0.js.map": "/lekope-FIS/static/js/main.e389d9c0.js.map",
     "239.d6d92b4b.chunk.js.map": "/lekope-FIS/static/js/239.d6d92b4b.chunk.js.map",
     "977.c9b11af2.chunk.js.map": "/lekope-FIS/static/js/977.c9b11af2.chunk.js.map",
     "732.3f7c2e18.chunk.js.map": "/lekope-FIS/static/js/732.3f7c2e18.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.941f58f9.css",
-    "static/js/main.a1f44d70.js"
+    "static/js/main.e389d9c0.js"
   ]
 }
