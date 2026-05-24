@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, AlertCircle, Plus, Search, Filter, Download, Eye, Send, Pencil, Trash2, DollarSign, CheckCircle, XCircle } from 'lucide-react';
-import { KPI, Badge, Modal, Field, Inp, Sel } from '../components/common/UI';
+import { FileText, AlertCircle, Plus, Trash2, DollarSign, CheckCircle, ShieldCheck } from 'lucide-react';
+import { KPI, Modal, Field, Inp, Sel } from '../components/common/UI';
 import PaymentModal from '../components/invoices/PaymentModal';
 import InvoiceActions from '../components/invoices/InvoiceActions';
 import { invoiceService } from '../services/invoiceService';
@@ -17,6 +17,7 @@ const Invoices = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentProofNotice, setPaymentProofNotice] = useState(null);
   const { user, hasRole } = useAuth();
   const isAuditor = user?.role === ROLES.AUDITOR;
   
@@ -94,7 +95,9 @@ const Invoices = () => {
       const updated = await invoiceService.recordPayment(selectedInvoice.id, paymentData);
       const latestPayment = updated.payments?.[updated.payments.length - 1];
       const proofHash = latestPayment?.blockchainProof?.blockHash;
-      toast.success(proofHash ? `Payment secured: ${proofHash.slice(0, 12)}...` : 'Payment recorded successfully');
+      const message = proofHash ? `Payment secured on internal ledger: ${proofHash.slice(0, 12)}...` : 'Payment recorded successfully';
+      setPaymentProofNotice(proofHash ? { invoiceId: updated.id, proofHash } : null);
+      toast.success(message);
       loadInvoices();
       setShowPaymentModal(false);
       window.dispatchEvent(new CustomEvent('invoicesUpdated', { detail: { invoice: updated } }));
@@ -107,6 +110,7 @@ const Invoices = () => {
     try {
       const ledger = await invoiceService.verifyLedger(id);
       if (ledger.valid) {
+        setPaymentProofNotice({ invoiceId: id, proofHash: ledger.ledgerTip });
         toast.success(`Ledger verified: ${ledger.ledgerTip.slice(0, 12)}...`);
       } else {
         toast.error('Ledger verification failed');
@@ -225,7 +229,7 @@ const Invoices = () => {
 
   return (
     <div className="page">
-      <ToastContainer position="top-right" autoClose={3000} />
+      <ToastContainer position="top-right" autoClose={5000} style={{ zIndex: 9999 }} />
       
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:22}}>
         <div>
@@ -249,10 +253,10 @@ const Invoices = () => {
 
       {/* Invoices table */}
       <div className="card">
-        <div className="sec-head">
+        <div className="sec-head invoice-table-head">
           <span className="sec-title">All Invoices</span>
-          <div style={{display:'flex',gap:8,alignItems:'center'}}>
-            <div style={{display:'flex',gap:4}}>
+          <div className="invoice-table-tools">
+            <div className="invoice-filter-tabs">
               {filters.map(f => (
                 <button 
                   key={f} 
@@ -265,32 +269,37 @@ const Invoices = () => {
               ))}
             </div>
             <input
+              className="invoice-search"
               type="text"
               placeholder="Search by client or invoice #"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{
-                padding: '6px 10px',
-                borderRadius: 4,
-                border: '1px solid var(--border)',
-                background: 'var(--bg-input)',
-                fontSize: '0.8rem',
-                width: 200
-              }}
             />
           </div>
         </div>
 
-        <table className="tbl">
+        {paymentProofNotice && (
+          <div className="invoice-ledger-notice">
+            <ShieldCheck size={17} />
+            <div>
+              <strong>Payment secured for {paymentProofNotice.invoiceId}</strong>
+              <span>{paymentProofNotice.proofHash}</span>
+            </div>
+            <button className="icon-btn" onClick={() => setPaymentProofNotice(null)}>Dismiss</button>
+          </div>
+        )}
+
+        <div className="invoice-table-wrap">
+        <table className="tbl invoice-table">
           <thead>
             <tr>
               <th>Invoice #</th>
               <th>Client</th>
-              <th>Issue Date</th>
-              <th>Due Date</th>
-              <th>Amount</th>
-              <th>Paid</th>
-              <th>Balance</th>
+              <th>Issue</th>
+              <th>Due</th>
+              <th className="num">Amount</th>
+              <th className="num">Paid</th>
+              <th className="num">Balance</th>
               <th>Ledger</th>
               <th>Status</th>
               <th>Actions</th>
@@ -301,33 +310,29 @@ const Invoices = () => {
               const balance = inv.amount - (inv.paidAmount || 0);
               return (
                 <tr key={inv.id}>
-                  <td style={{color:'var(--gold)',fontFamily:'var(--font-display)',fontSize:'0.82rem'}}>{inv.id}</td>
-                  <td>
+                  <td className="invoice-id">{inv.id}</td>
+                  <td className="invoice-client">
                     <b>{inv.client}</b>
-                    {inv.clientEmail && <div style={{fontSize:'0.7rem', color:'var(--text-muted)'}}>{inv.clientEmail}</div>}
+                    {inv.clientEmail && <span>{inv.clientEmail}</span>}
                   </td>
-                  <td style={{fontSize:'0.8rem'}}>{inv.issue}</td>
-                  <td style={{fontSize:'0.8rem', color: inv.status === 'OVERDUE' ? 'var(--red)' : 'var(--text-secondary)'}}>{inv.due}</td>
-                  <td style={{fontFamily:'var(--font-display)',fontWeight:700}}>{formatCurrency(inv.amount)}</td>
-                  <td style={{color:'var(--green)'}}>{formatCurrency(inv.paidAmount || 0)}</td>
-                  <td style={{color: balance > 0 ? 'var(--orange)' : 'var(--green)'}}>{formatCurrency(balance)}</td>
+                  <td className="date">{inv.issue}</td>
+                  <td className={inv.status === 'OVERDUE' ? 'date overdue' : 'date'}>{inv.due}</td>
+                  <td className="num strong">{formatCurrency(inv.amount)}</td>
+                  <td className="num paid">{formatCurrency(inv.paidAmount || 0)}</td>
+                  <td className={balance > 0 ? 'num balance outstanding' : 'num balance settled'}>{formatCurrency(balance)}</td>
                   <td>
                     {inv.blockchainLedgerTip ? (
-                      <span className="badge" style={{ background: '#d4edda', color: '#155724' }} title={inv.blockchainLedgerTip}>
-                        SECURED
-                      </span>
+                      <span className="badge ledger-badge secured" title={inv.blockchainLedgerTip}>Secured</span>
                     ) : (
-                      <span className="badge" style={{ background: '#e2e3e5', color: '#383d41' }}>
-                        NONE
-                      </span>
+                      <span className="badge ledger-badge empty">None</span>
                     )}
                   </td>
                   <td>
                     <span className="badge" style={getStatusStyle(inv.status)}>
-                      {inv.status === 'PARTIAL' ? '⏱ PARTIAL' : inv.status}
+                      {inv.status === 'PARTIAL' ? 'PARTIAL' : inv.status}
                     </span>
                   </td>
-                  <td>
+                  <td className="invoice-actions-cell">
                     <InvoiceActions 
                       invoice={inv}
                       readOnly={isAuditor}
@@ -345,6 +350,7 @@ const Invoices = () => {
             })}
           </tbody>
         </table>
+        </div>
 
         {/* Overdue alert */}
         {overdue > 0 && (

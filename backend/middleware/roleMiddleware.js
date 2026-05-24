@@ -21,7 +21,7 @@ const hasRole = (...roles) => {
 const isFinanceManager = hasRole('STATION_MANAGER', 'FINANCE_OFFICER', 'AUDITOR');
 
 // Check if user can manage invoices (full CRUD)
-const canManageInvoices = hasRole('STATION_MANAGER', 'MARKETING_OFFICER');
+const canManageInvoices = hasRole('STATION_MANAGER', 'FINANCE_OFFICER', 'MARKETING_OFFICER');
 
 // Check if user can view invoices
 const canViewInvoices = hasRole('STATION_MANAGER', 'FINANCE_OFFICER', 'MARKETING_OFFICER', 'AUDITOR');
