@@ -64,6 +64,7 @@ const Dashboard = () => {
   const [advertisers, setAdvertisers] = useState([]);
   const [payrollSummary, setPayrollSummary] = useState(null);
   const [adContracts, setAdContracts] = useState([]);
+  const [airtimes, setAirtimes] = useState([]);
   const [upcomingPayments, setUpcomingPayments] = useState([]);
   const [managerTab, setManagerTab] = useState('users');
   const [stationUsers, setStationUsers] = useState([]);
@@ -139,6 +140,7 @@ const Dashboard = () => {
         bookingsData,
         advertisersData,
         adContractsData,
+        airtimesData,
         payrollSummaryData,
         budgetSummaryData,
         bankEntriesData,
@@ -159,6 +161,7 @@ const Dashboard = () => {
         fetchWithFallback(() => bookingService.getBookings(), []),
         fetchWithFallback(() => advertiserService.getAdvertisers(), []),
         fetchWithFallback(() => advertiserService.getAdContracts(), []),
+        fetchWithFallback(() => bookingService.getAirtimes(), []),
         fetchWithFallback(() => payrollService.getPayrollSummary(), null),
         fetchWithFallback(() => budgetService.getBudgetSummary(), null),
         fetchWithFallback(() => bankReconciliationService.getEntries(), []),
@@ -227,6 +230,7 @@ const Dashboard = () => {
       setBookings(Array.isArray(bookingsData) ? bookingsData : []);
       setAdvertisers(Array.isArray(advertisersData) ? advertisersData : []);
       setAdContracts(Array.isArray(adContractsData) ? adContractsData : []);
+      setAirtimes(Array.isArray(airtimesData) ? airtimesData : []);
       setPayrollSummary(payrollSummaryData || null);
       setInvoices(Array.isArray(invoicesData) ? invoicesData : []);
       setUpcomingPayments(buildUpcomingPayments(Array.isArray(invoicesData) ? invoicesData : []));
@@ -618,23 +622,26 @@ const Dashboard = () => {
         });
       }
 
-      // Ad Contract Value by Status
+      // Contract Type Distribution for Ad Contracts + Airtime
       adContractsChart.current?.destroy();
       if (adContractsRef.current) {
-        const contractTotals = adContracts.reduce((acc, contract) => {
-          const status = contract.status || 'Pending';
-          acc[status] = (acc[status] || 0) + Number(contract.amount || contract.value || contract.total || 0);
-          return acc;
-        }, {});
-        const labels = Object.keys(contractTotals);
+        const typeCounts = [...adContracts.map(contract => ({ type: contract.type || 'Ad Contract' })), ...airtimes.map(entry => ({ type: entry.type || 'Airtime Booking' }))]
+          .reduce((acc, item) => {
+            const type = item.type || 'Unknown';
+            acc[type] = (acc[type] || 0) + 1;
+            return acc;
+          }, {});
+        const labels = Object.keys(typeCounts);
+        const values = labels.map(type => typeCounts[type]);
+
         adContractsChart.current = new Chart(adContractsRef.current, {
           type: 'bar',
           data: {
             labels: labels.length ? labels : ['No contracts'],
             datasets: [{
-              label: 'Contract Value',
-              data: labels.length ? Object.values(contractTotals) : [0],
-              backgroundColor: ['rgba(245,197,24,0.82)', 'rgba(34,197,94,0.78)', 'rgba(249,115,22,0.78)', 'rgba(239,68,68,0.78)'],
+              label: 'Contract Count',
+              data: labels.length ? values : [0],
+              backgroundColor: ['rgba(245,197,24,0.82)', 'rgba(34,197,94,0.78)', 'rgba(249,115,22,0.78)', 'rgba(239,68,68,0.78)', 'rgba(59,130,246,0.78)'],
               borderRadius: 4
             }]
           },
@@ -643,11 +650,11 @@ const Dashboard = () => {
             maintainAspectRatio: false,
             plugins: {
               legend: { display: false },
-              tooltip: { callbacks: { label: ctx => lsl(ctx.parsed.y || 0) } }
+              tooltip: { callbacks: { label: ctx => `${ctx.label}: ${ctx.parsed.y || 0} contracts` } }
             },
             scales: {
               x: { grid: { color: '#1e2e48' }, ticks: { color: '#8ba0bc' } },
-              y: { grid: { color: '#1e2e48' }, ticks: { color: '#8ba0bc', callback: v => `${(v / 1000).toFixed(0)}k` }, min: 0 }
+              y: { grid: { color: '#1e2e48' }, ticks: { color: '#8ba0bc' }, min: 0 }
             }
           }
         });
@@ -908,7 +915,17 @@ const Dashboard = () => {
   const advertiserCount = advertisers.length;
   const payrollGross = payrollSummary?.totalGross || 0;
   const totalContracts = adContracts.length;
+  const airtimeCount = airtimes.length;
+  const airtimeDurationTotal = airtimes.reduce((sum, airtime) => sum + Number(airtime.duration || 0), 0);
   const contractValueTotal = adContracts.reduce((sum, contract) => sum + Number(contract.amount || 0), 0);
+  const combinedContractTypeCounts = [...adContracts.map(contract => ({ type: contract.type || 'Ad Contract' })), ...airtimes.map(entry => ({ type: entry.type || 'Airtime Booking' }))]
+    .reduce((acc, item) => {
+      const type = item.type || 'Unknown';
+      acc[type] = (acc[type] || 0) + 1;
+      return acc;
+    }, {});
+  const contractTypeLabels = Object.keys(combinedContractTypeCounts);
+  const contractTypeValues = contractTypeLabels.map(type => combinedContractTypeCounts[type]);
   const budgetTotals = budgetSummary?.budgetSummary || { total: 0, spent: 0, remaining: 0, utilization: 0 };
   const bankMatchedCount = bankEntries.filter(entry => entry.status === 'MATCHED').length;
   const bankReconciliationRate = bankEntries.length ? Math.round((bankMatchedCount / bankEntries.length) * 100) : 100;
@@ -1066,6 +1083,13 @@ const Dashboard = () => {
       </div>
 
       <div className="g4" style={{ marginBottom: 20 }}>
+        <KPI title="Airtime Bookings" value={airtimeCount} sub="Live airtime requests" icon={Clock} accent="var(--purple)" />
+        <KPI title="Airtime Duration" value={`${airtimeDurationTotal} min`} sub="Scheduled airtime" icon={BarChart3} accent="var(--blue)" />
+        <KPI title="Contract Types" value={`${contractTypeLabels.length}`} sub="Ad + airtime categories" icon={FileText} accent="var(--gold)" />
+        <KPI title="Contract Count" value={`${totalContracts + airtimeCount}`} sub="Total contracts" icon={TrendingUp} accent="var(--green)" />
+      </div>
+
+      <div className="g4" style={{ marginBottom: 20 }}>
         <KPI title="Budget Remaining" value={lsl(budgetTotals.remaining || 0)} sub={`${budgetTotals.utilization || 0}% utilized`} icon={PieChart} accent="var(--blue)" />
         <KPI title="Bank Matched" value={`${bankReconciliationRate}%`} sub={`${bankEntries.length - bankMatchedCount} unmatched entries`} icon={BarChart3} accent="var(--green)" />
         <KPI title="Tax Due" value={lsl(taxDue + taxOverdue)} sub={`${complianceScore}% compliance score`} icon={AlertCircle} accent={taxOverdue > 0 ? 'var(--red)' : 'var(--gold)'} />
@@ -1141,7 +1165,7 @@ const Dashboard = () => {
           <div style={{ height: 300 }} className="chart-card-glow"><canvas ref={payrollRef} /></div>
         </div>
         <div className="dashboard-chart-panel">
-          <div className="sec-head"><span className="sec-title">Ad Contract Value by Status</span></div>
+          <div className="sec-head"><span className="sec-title">Contracts by Type</span></div>
           <div style={{ height: 300 }} className="chart-card-glow"><canvas ref={adContractsRef} /></div>
         </div>
       </div>
