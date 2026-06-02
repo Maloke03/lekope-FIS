@@ -10,6 +10,12 @@ import { reportService } from '../services/reportService';
 import { bookingService } from '../services/bookingService';
 import { advertiserService } from '../services/advertiserService';
 import { payrollService } from '../services/payrollService';
+import { budgetService } from '../services/budgetService';
+import { bankReconciliationService } from '../services/bankReconciliationService';
+import { taxService } from '../services/taxService';
+import { assetService } from '../services/assetService';
+import { rateCardService } from '../services/rateCardService';
+import { analyticsService } from '../services/analyticsService';
 import { ROLES, useAuth } from '../contexts/AuthContext';
 import { lsl, statusStyle } from '../utils/helpers';
 import API_URL from '../config/apiConfig';
@@ -36,6 +42,9 @@ const Dashboard = () => {
   const advertisersRef = useRef(); const advertisersChart = useRef();
   const payrollRef = useRef(); const payrollChart = useRef();
   const adContractsRef = useRef(); const adContractsChart = useRef();
+  const monthlyExpenseRef = useRef(); const monthlyExpenseChart = useRef();
+  const budgetActualRef = useRef(); const budgetActualChart = useRef();
+  const quarterlyForecastRef = useRef(); const quarterlyForecastChart = useRef();
 
   const isStationManager = user?.role === ROLES.STATION_MANAGER;
   const isFinanceOfficer = user?.role === ROLES.FINANCE_OFFICER;
@@ -60,6 +69,17 @@ const Dashboard = () => {
   const [stationUsers, setStationUsers] = useState([]);
   const [loginHistory, setLoginHistory] = useState([]);
   const [financialData, setFinancialData] = useState(null);
+  const [invoices, setInvoices] = useState([]);
+  const [budgetSummary, setBudgetSummary] = useState(null);
+  const [bankEntries, setBankEntries] = useState([]);
+  const [taxSummary, setTaxSummary] = useState(null);
+  const [taxItems, setTaxItems] = useState([]);
+  const [assetSummary, setAssetSummary] = useState(null);
+  const [assets, setAssets] = useState([]);
+  const [rateCards, setRateCards] = useState([]);
+  const [analyticsOverview, setAnalyticsOverview] = useState(null);
+  const [expenseMonthlyData, setExpenseMonthlyData] = useState(null);
+  const [revenueMonthlyData, setRevenueMonthlyData] = useState(null);
 
   const buildTopClients = (revenues = []) => {
     const clients = revenues.reduce((acc, item) => {
@@ -108,7 +128,27 @@ const Dashboard = () => {
         }
       };
 
-      const [revSummary, expSummary, revenueMonthly, expenseMonthly, invoices, allRevenue, finData, bookingsData, advertisersData, adContractsData, payrollSummaryData] = await Promise.all([
+      const [
+        revSummary,
+        expSummary,
+        revenueMonthly,
+        expenseMonthly,
+        invoicesData,
+        allRevenue,
+        finData,
+        bookingsData,
+        advertisersData,
+        adContractsData,
+        payrollSummaryData,
+        budgetSummaryData,
+        bankEntriesData,
+        taxSummaryData,
+        taxItemsData,
+        assetSummaryData,
+        assetsData,
+        rateCardsData,
+        analyticsOverviewData
+      ] = await Promise.all([
         fetchWithFallback(() => revenueService.getRevenueSummary(), { totalRevenue: 0, avgGrowth: 0, activeContracts: 0 }),
         fetchWithFallback(() => expenseService.getExpenseSummary(), { total: 0, budget: 2500000, budgetUsed: 0 }),
         fetchWithFallback(() => revenueService.getMonthlyRevenue(), { labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], advertising: [], sponsorships: [], events: [], digital: [] }),
@@ -119,7 +159,15 @@ const Dashboard = () => {
         fetchWithFallback(() => bookingService.getBookings(), []),
         fetchWithFallback(() => advertiserService.getAdvertisers(), []),
         fetchWithFallback(() => advertiserService.getAdContracts(), []),
-        fetchWithFallback(() => payrollService.getPayrollSummary(), null)
+        fetchWithFallback(() => payrollService.getPayrollSummary(), null),
+        fetchWithFallback(() => budgetService.getBudgetSummary(), null),
+        fetchWithFallback(() => bankReconciliationService.getEntries(), []),
+        fetchWithFallback(() => taxService.getTaxSummary(), null),
+        fetchWithFallback(() => taxService.getTax(), []),
+        fetchWithFallback(() => assetService.getAssetSummary(), null),
+        fetchWithFallback(() => assetService.getAssets(), []),
+        fetchWithFallback(() => rateCardService.getRates(), []),
+        fetchWithFallback(() => analyticsService.getOverview(), null)
       ]);
 
       // Ensure arrays have proper length for monthly data
@@ -154,7 +202,7 @@ const Dashboard = () => {
       const revenueGrowth = Number(revSummary?.avgGrowth || 0);
 
       // Calculate outstanding invoices
-      const outstandingAmount = Array.isArray(invoices) ? invoices.reduce((sum, inv) => {
+      const outstandingAmount = Array.isArray(invoicesData) ? invoicesData.reduce((sum, inv) => {
         const balance = Number(inv.amount || 0) - Number(inv.paidAmount || 0);
         return sum + (inv.status !== 'PAID' && inv.status !== 'WRITTEN_OFF' && balance > 0 ? balance : 0);
       }, 0) : 0;
@@ -180,8 +228,19 @@ const Dashboard = () => {
       setAdvertisers(Array.isArray(advertisersData) ? advertisersData : []);
       setAdContracts(Array.isArray(adContractsData) ? adContractsData : []);
       setPayrollSummary(payrollSummaryData || null);
-      setUpcomingPayments(buildUpcomingPayments(Array.isArray(invoices) ? invoices : []));
+      setInvoices(Array.isArray(invoicesData) ? invoicesData : []);
+      setUpcomingPayments(buildUpcomingPayments(Array.isArray(invoicesData) ? invoicesData : []));
       setFinancialData(finData);
+      setBudgetSummary(budgetSummaryData || null);
+      setBankEntries(Array.isArray(bankEntriesData) ? bankEntriesData : []);
+      setTaxSummary(taxSummaryData || null);
+      setTaxItems(Array.isArray(taxItemsData) ? taxItemsData : []);
+      setAssetSummary(assetSummaryData || null);
+      setAssets(Array.isArray(assetsData) ? assetsData : []);
+      setRateCards(Array.isArray(rateCardsData) ? rateCardsData : []);
+      setAnalyticsOverview(analyticsOverviewData || null);
+      setExpenseMonthlyData(expenseMonthly || null);
+      setRevenueMonthlyData(revenueMonthly || null);
 
       if (isStationManager) {
         const token = localStorage.getItem('authToken');
@@ -460,11 +519,263 @@ const Dashboard = () => {
         });
       }
 
+      // Booking Status
+      bookingsChart.current?.destroy();
+      if (bookingsRef.current) {
+        const statusCounts = bookings.reduce((acc, booking) => {
+          const status = booking.status || 'Pending';
+          acc[status] = (acc[status] || 0) + 1;
+          return acc;
+        }, {});
+        const labels = Object.keys(statusCounts);
+        bookingsChart.current = new Chart(bookingsRef.current, {
+          type: 'doughnut',
+          data: {
+            labels: labels.length ? labels : ['No bookings'],
+            datasets: [{
+              data: labels.length ? Object.values(statusCounts) : [1],
+              backgroundColor: ['#22c55e', '#f97316', '#60a5fa', '#ef4444', '#a855f7'],
+              borderColor: '#141f35',
+              borderWidth: 2
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { labels: { color: '#8ba0bc', font: { family: 'DM Sans' }, boxWidth: 12, padding: 14 } },
+              tooltip: { callbacks: { label: ctx => `${ctx.label}: ${ctx.parsed} booking(s)` } }
+            }
+          }
+        });
+      }
+
+      // Top Advertisers
+      advertisersChart.current?.destroy();
+      if (advertisersRef.current) {
+        const topAdvertisers = [...advertisers]
+          .map(advertiser => ({
+            name: advertiser.name || advertiser.client || 'Unknown',
+            value: Number(advertiser.billed || advertiser.totalBilled || advertiser.amount || advertiser.campaigns || 0)
+          }))
+          .sort((a, b) => b.value - a.value)
+          .slice(0, 6);
+        advertisersChart.current = new Chart(advertisersRef.current, {
+          type: 'bar',
+          data: {
+            labels: topAdvertisers.length ? topAdvertisers.map(item => item.name) : ['No advertisers'],
+            datasets: [{
+              label: 'Billed / Activity',
+              data: topAdvertisers.length ? topAdvertisers.map(item => item.value) : [0],
+              backgroundColor: 'rgba(34,197,94,0.78)',
+              borderColor: '#22c55e',
+              borderWidth: 1,
+              borderRadius: 4
+            }]
+          },
+          options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: { callbacks: { label: ctx => lsl(ctx.parsed.x || 0) } }
+            },
+            scales: {
+              x: { grid: { color: '#1e2e48' }, ticks: { color: '#8ba0bc', callback: v => `${(v / 1000).toFixed(0)}k` } },
+              y: { grid: { display: false }, ticks: { color: '#8ba0bc' } }
+            }
+          }
+        });
+      }
+
+      // Payroll Status
+      payrollChart.current?.destroy();
+      if (payrollRef.current) {
+        const paid = Number(payrollSummary?.paid || 0);
+        const pending = Number(payrollSummary?.pending || 0);
+        const employeeCount = Number(payrollSummary?.employeeCount || 0);
+        const other = Math.max(0, employeeCount - paid - pending);
+        payrollChart.current = new Chart(payrollRef.current, {
+          type: 'doughnut',
+          data: {
+            labels: ['Paid', 'Pending', 'Other'],
+            datasets: [{
+              data: employeeCount ? [paid, pending, other] : [0, 0, 0],
+              backgroundColor: ['#22c55e', '#f97316', '#4a6080'],
+              borderColor: '#141f35',
+              borderWidth: 2
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { labels: { color: '#8ba0bc', font: { family: 'DM Sans' }, boxWidth: 12, padding: 14 } },
+              tooltip: { callbacks: { label: ctx => `${ctx.label}: ${ctx.parsed} employee(s)` } }
+            }
+          }
+        });
+      }
+
+      // Ad Contract Value by Status
+      adContractsChart.current?.destroy();
+      if (adContractsRef.current) {
+        const contractTotals = adContracts.reduce((acc, contract) => {
+          const status = contract.status || 'Pending';
+          acc[status] = (acc[status] || 0) + Number(contract.amount || contract.value || contract.total || 0);
+          return acc;
+        }, {});
+        const labels = Object.keys(contractTotals);
+        adContractsChart.current = new Chart(adContractsRef.current, {
+          type: 'bar',
+          data: {
+            labels: labels.length ? labels : ['No contracts'],
+            datasets: [{
+              label: 'Contract Value',
+              data: labels.length ? Object.values(contractTotals) : [0],
+              backgroundColor: ['rgba(245,197,24,0.82)', 'rgba(34,197,94,0.78)', 'rgba(249,115,22,0.78)', 'rgba(239,68,68,0.78)'],
+              borderRadius: 4
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: { callbacks: { label: ctx => lsl(ctx.parsed.y || 0) } }
+            },
+            scales: {
+              x: { grid: { color: '#1e2e48' }, ticks: { color: '#8ba0bc' } },
+              y: { grid: { color: '#1e2e48' }, ticks: { color: '#8ba0bc', callback: v => `${(v / 1000).toFixed(0)}k` }, min: 0 }
+            }
+          }
+        });
+      }
+
+      // Revenue Composition
+      revenueCompositionChart.current?.destroy();
+      if (revenueCompositionRef.current) {
+        const revenueRows = financialData?.incomeStatement?.revenue?.length
+          ? financialData.incomeStatement.revenue.map(item => ({ name: item.name, amount: Number(item.amount || 0) }))
+          : [
+              { name: 'Advertising', amount: (revenueMonthlyData?.advertising || []).reduce((sum, value) => sum + Number(value || 0), 0) },
+              { name: 'Sponsorships', amount: (revenueMonthlyData?.sponsorships || []).reduce((sum, value) => sum + Number(value || 0), 0) },
+              { name: 'Events', amount: (revenueMonthlyData?.events || []).reduce((sum, value) => sum + Number(value || 0), 0) },
+              { name: 'Digital', amount: (revenueMonthlyData?.digital || []).reduce((sum, value) => sum + Number(value || 0), 0) }
+            ].filter(item => item.amount > 0);
+        revenueCompositionChart.current = new Chart(revenueCompositionRef.current, {
+          type: 'doughnut',
+          data: {
+            labels: revenueRows.length ? revenueRows.map(item => item.name) : ['No revenue'],
+            datasets: [{
+              data: revenueRows.length ? revenueRows.map(item => item.amount) : [1],
+              backgroundColor: ['#f5c518', '#22c55e', '#60a5fa', '#a855f7', '#f97316'],
+              borderColor: '#141f35',
+              borderWidth: 2
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { labels: { color: '#8ba0bc', font: { family: 'DM Sans' }, boxWidth: 12, padding: 14 } },
+              tooltip: { callbacks: { label: ctx => `${ctx.label}: ${lsl(ctx.parsed)}` } }
+            }
+          }
+        });
+      }
+
+      // Monthly Expense Trend
+      monthlyExpenseChart.current?.destroy();
+      if (monthlyExpenseRef.current) {
+        const expenseLabels = expenseMonthlyData?.labels || monthlyTrend.labels;
+        monthlyExpenseChart.current = new Chart(monthlyExpenseRef.current, {
+          type: 'bar',
+          data: {
+            labels: expenseLabels,
+            datasets: [
+              { label: 'Salaries', data: expenseMonthlyData?.salaries || [], backgroundColor: 'rgba(245,197,24,0.78)', borderRadius: 3 },
+              { label: 'Operations', data: expenseMonthlyData?.operations || [], backgroundColor: 'rgba(249,115,22,0.78)', borderRadius: 3 },
+              { label: 'Marketing', data: expenseMonthlyData?.marketing || [], backgroundColor: 'rgba(96,165,250,0.78)', borderRadius: 3 },
+              { label: 'Other', data: expenseMonthlyData?.other || [], backgroundColor: 'rgba(168,85,247,0.78)', borderRadius: 3 }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { labels: { color: '#8ba0bc', font: { family: 'DM Sans' }, boxWidth: 12, padding: 14 } },
+              tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${lsl(ctx.parsed.y || 0)}` } }
+            },
+            scales: {
+              x: { stacked: true, grid: { color: '#1e2e48' }, ticks: { color: '#8ba0bc' } },
+              y: { stacked: true, grid: { color: '#1e2e48' }, ticks: { color: '#8ba0bc', callback: v => `${(v / 1000).toFixed(0)}k` }, min: 0 }
+            }
+          }
+        });
+      }
+
+      // Budget vs Actual
+      budgetActualChart.current?.destroy();
+      if (budgetActualRef.current && budgetSummary?.budgetVsActual) {
+        budgetActualChart.current = new Chart(budgetActualRef.current, {
+          type: 'bar',
+          data: {
+            labels: budgetSummary.budgetVsActual.labels || [],
+            datasets: [
+              { label: 'Budget', data: budgetSummary.budgetVsActual.budget || [], backgroundColor: 'rgba(74,96,128,0.55)', borderRadius: 3 },
+              { label: 'Actual', data: budgetSummary.budgetVsActual.actual || [], backgroundColor: 'rgba(245,197,24,0.82)', borderRadius: 3 }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { labels: { color: '#8ba0bc', font: { family: 'DM Sans' }, boxWidth: 12, padding: 14 } },
+              tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${lsl(ctx.parsed.y || 0)}` } }
+            },
+            scales: {
+              x: { grid: { color: '#1e2e48' }, ticks: { color: '#8ba0bc' } },
+              y: { grid: { color: '#1e2e48' }, ticks: { color: '#8ba0bc', callback: v => `${(v / 1000).toFixed(0)}k` }, min: 0 }
+            }
+          }
+        });
+      }
+
+      // Quarterly Forecast
+      quarterlyForecastChart.current?.destroy();
+      if (quarterlyForecastRef.current && budgetSummary?.quarterlyForecast) {
+        quarterlyForecastChart.current = new Chart(quarterlyForecastRef.current, {
+          type: 'line',
+          data: {
+            labels: budgetSummary.quarterlyForecast.labels || [],
+            datasets: [
+              { label: 'Budget', data: budgetSummary.quarterlyForecast.budget || [], borderColor: '#4a6080', borderDash: [5, 4], tension: 0.3, fill: false },
+              { label: 'Actual', data: budgetSummary.quarterlyForecast.actual || [], borderColor: '#f5c518', tension: 0.3, fill: false },
+              { label: 'Forecast', data: budgetSummary.quarterlyForecast.forecast || [], borderColor: '#60a5fa', borderDash: [3, 3], tension: 0.3, fill: false }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { labels: { color: '#8ba0bc', font: { family: 'DM Sans' }, boxWidth: 12, padding: 14 } },
+              tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${lsl(ctx.parsed.y || 0)}` } }
+            },
+            scales: {
+              x: { grid: { color: '#1e2e48' }, ticks: { color: '#8ba0bc' } },
+              y: { grid: { color: '#1e2e48' }, ticks: { color: '#8ba0bc', callback: v => `${(v / 1000).toFixed(0)}k` }, min: 0 }
+            }
+          }
+        });
+      }
+
       // Invoice Status Chart (Station Manager)
       invoiceStatusChart.current?.destroy();
-      if (isStationManager && upcomingPayments && upcomingPayments.length > 0) {
-        const statusCounts = upcomingPayments.reduce((acc, payment) => {
-          acc[payment.status] = (acc[payment.status] || 0) + 1;
+      if (isStationManager && invoices && invoices.length > 0) {
+        const statusCounts = invoices.reduce((acc, invoice) => {
+          acc[invoice.status || 'DRAFT'] = (acc[invoice.status || 'DRAFT'] || 0) + 1;
           return acc;
         }, {});
 
@@ -543,7 +854,23 @@ const Dashboard = () => {
     } catch (error) {
       console.error('Error initializing charts:', error);
     }
-  }, [monthlyTrend, topClients, upcomingPayments, financialData, isFinanceOfficer, isStationManager]);
+  }, [
+    monthlyTrend,
+    topClients,
+    upcomingPayments,
+    invoices,
+    financialData,
+    isFinanceOfficer,
+    isStationManager,
+    loginHistory,
+    bookings,
+    advertisers,
+    adContracts,
+    payrollSummary,
+    budgetSummary,
+    expenseMonthlyData,
+    revenueMonthlyData
+  ]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -562,6 +889,9 @@ const Dashboard = () => {
       advertisersChart.current?.destroy();
       payrollChart.current?.destroy();
       adContractsChart.current?.destroy();
+      monthlyExpenseChart.current?.destroy();
+      budgetActualChart.current?.destroy();
+      quarterlyForecastChart.current?.destroy();
     };
   }, []);
 
@@ -579,6 +909,74 @@ const Dashboard = () => {
   const payrollGross = payrollSummary?.totalGross || 0;
   const totalContracts = adContracts.length;
   const contractValueTotal = adContracts.reduce((sum, contract) => sum + Number(contract.amount || 0), 0);
+  const budgetTotals = budgetSummary?.budgetSummary || { total: 0, spent: 0, remaining: 0, utilization: 0 };
+  const bankMatchedCount = bankEntries.filter(entry => entry.status === 'MATCHED').length;
+  const bankReconciliationRate = bankEntries.length ? Math.round((bankMatchedCount / bankEntries.length) * 100) : 100;
+  const bankUnmatchedValue = bankEntries
+    .filter(entry => entry.status !== 'MATCHED')
+    .reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
+  const taxDue = Number(taxSummary?.totalDue || 0);
+  const taxOverdue = Number(taxSummary?.totalOverdue || 0);
+  const complianceScore = Number(taxSummary?.complianceScore ?? 100);
+  const assetValue = Number(assetSummary?.totalNBV || assets.reduce((sum, asset) => sum + Number(asset.netBook || 0), 0));
+  const depreciationTotal = Number(assetSummary?.totalAccum || 0);
+  const activeRates = rateCards.filter(rate => rate.status !== 'Inactive').length || rateCards.length;
+  const invoiceCount = invoices.length;
+  const paidInvoiceCount = invoices.filter(invoice => invoice.status === 'PAID').length;
+  const securedInvoiceCount = invoices.filter(invoice => invoice.blockchainLedgerTip).length;
+  const analyticsHealth = analyticsOverview?.summary || analyticsOverview || null;
+  const moduleHealthRows = [
+    {
+      module: 'Invoices',
+      metric: `${paidInvoiceCount}/${invoiceCount} paid`,
+      value: lsl(summary.outstanding),
+      status: summary.outstanding > 0 ? 'Monitor' : 'On Track'
+    },
+    {
+      module: 'Secure Ledger',
+      metric: `${securedInvoiceCount}/${invoiceCount} secured`,
+      value: `${invoiceCount ? Math.round((securedInvoiceCount / invoiceCount) * 100) : 100}%`,
+      status: securedInvoiceCount === invoiceCount ? 'On Track' : 'Watch'
+    },
+    {
+      module: 'Budget',
+      metric: `${budgetTotals.utilization || 0}% used`,
+      value: lsl(budgetTotals.remaining || 0),
+      status: (budgetTotals.utilization || 0) >= 100 ? 'Over budget' : (budgetTotals.utilization || 0) >= 90 ? 'Watch' : 'On Track'
+    },
+    {
+      module: 'Bank Reconciliation',
+      metric: `${bankReconciliationRate}% matched`,
+      value: lsl(bankUnmatchedValue),
+      status: bankReconciliationRate >= 95 ? 'On Track' : 'Watch'
+    },
+    {
+      module: 'Tax & Compliance',
+      metric: `${complianceScore}% compliant`,
+      value: lsl(taxDue + taxOverdue),
+      status: taxOverdue > 0 || complianceScore < 80 ? 'Over budget' : complianceScore < 95 ? 'Watch' : 'On Track'
+    },
+    {
+      module: 'Assets',
+      metric: `${assets.length} assets`,
+      value: lsl(assetValue),
+      status: 'On Track'
+    },
+    {
+      module: 'Rate Card',
+      metric: `${activeRates} active rates`,
+      value: `${rateCards.length} total`,
+      status: activeRates > 0 ? 'On Track' : 'Watch'
+    }
+  ];
+  const recentOperationalRows = [
+    ...invoices.slice(0, 3).map(item => ({ type: 'Invoice', label: item.client, amount: item.amount, status: item.status, date: item.issue || item.createdAt })),
+    ...bookings.slice(0, 3).map(item => ({ type: 'Booking', label: item.client || item.campaign, amount: item.amount || item.spots || 0, status: item.status, date: item.due || item.createdAt })),
+    ...taxItems.slice(0, 3).map(item => ({ type: 'Tax', label: item.type, amount: item.amount, status: item.status, date: item.dueDate || item.createdAt })),
+    ...bankEntries.slice(0, 3).map(item => ({ type: 'Bank', label: item.description, amount: item.amount, status: item.status, date: item.date || item.createdAt }))
+  ]
+    .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
+    .slice(0, 8);
 
   return (
     <div className="page">
@@ -667,6 +1065,65 @@ const Dashboard = () => {
         <KPI title="Ad Contracts" value={lsl(contractValueTotal)} sub={`${totalContracts} contracts`} icon={FileText} accent="var(--orange)" />
       </div>
 
+      <div className="g4" style={{ marginBottom: 20 }}>
+        <KPI title="Budget Remaining" value={lsl(budgetTotals.remaining || 0)} sub={`${budgetTotals.utilization || 0}% utilized`} icon={PieChart} accent="var(--blue)" />
+        <KPI title="Bank Matched" value={`${bankReconciliationRate}%`} sub={`${bankEntries.length - bankMatchedCount} unmatched entries`} icon={BarChart3} accent="var(--green)" />
+        <KPI title="Tax Due" value={lsl(taxDue + taxOverdue)} sub={`${complianceScore}% compliance score`} icon={AlertCircle} accent={taxOverdue > 0 ? 'var(--red)' : 'var(--gold)'} />
+        <KPI title="Net Asset Value" value={lsl(assetValue)} sub={`${lsl(depreciationTotal)} accumulated depreciation`} icon={TrendingUp} accent="var(--teal)" />
+      </div>
+
+      <div className="g2" style={{ marginBottom: 20 }}>
+        <div className="card">
+          <div className="sec-head"><span className="sec-title">Module Data Health</span></div>
+          <table className="tbl">
+            <thead>
+              <tr>
+                <th>Module</th>
+                <th>Metric</th>
+                <th>Value</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {moduleHealthRows.map(row => (
+                <tr key={row.module}>
+                  <td><b>{row.module}</b></td>
+                  <td>{row.metric}</td>
+                  <td>{row.value}</td>
+                  <td><span className="badge" style={statusStyle(row.status)}>{row.status}</span></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="card">
+          <div className="sec-head"><span className="sec-title">Recent Cross-Module Activity</span></div>
+          <table className="tbl">
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th>Record</th>
+                <th>Amount</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recentOperationalRows.length === 0 ? (
+                <tr><td colSpan="4" style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No recent operational records yet.</td></tr>
+              ) : recentOperationalRows.map((row, index) => (
+                <tr key={`${row.type}-${row.label}-${index}`}>
+                  <td>{row.type}</td>
+                  <td><b>{row.label || '-'}</b></td>
+                  <td>{typeof row.amount === 'number' ? lsl(row.amount) : row.amount || '-'}</td>
+                  <td><span className="badge" style={statusStyle(row.status)}>{row.status || '-'}</span></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <div className="g2" style={{ marginBottom: 20 }}>
         <div className="dashboard-chart-panel">
           <div className="sec-head"><span className="sec-title">Booking Status</span></div>
@@ -686,6 +1143,21 @@ const Dashboard = () => {
         <div className="dashboard-chart-panel">
           <div className="sec-head"><span className="sec-title">Ad Contract Value by Status</span></div>
           <div style={{ height: 300 }} className="chart-card-glow"><canvas ref={adContractsRef} /></div>
+        </div>
+      </div>
+
+      <div className="g3" style={{ marginBottom: 20 }}>
+        <div className="dashboard-chart-panel">
+          <div className="sec-head"><span className="sec-title">Monthly Expense Trend</span></div>
+          <div style={{ height: 280 }} className="chart-card-glow"><canvas ref={monthlyExpenseRef} /></div>
+        </div>
+        <div className="dashboard-chart-panel">
+          <div className="sec-head"><span className="sec-title">Budget vs Actual</span></div>
+          <div style={{ height: 280 }} className="chart-card-glow"><canvas ref={budgetActualRef} /></div>
+        </div>
+        <div className="dashboard-chart-panel">
+          <div className="sec-head"><span className="sec-title">Quarterly Forecast</span></div>
+          <div style={{ height: 280 }} className="chart-card-glow"><canvas ref={quarterlyForecastRef} /></div>
         </div>
       </div>
 
