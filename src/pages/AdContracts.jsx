@@ -3,6 +3,7 @@ import { Megaphone, Plus, Eye, TrendingUp, Radio, Calendar, Tag, Bell, FileText 
 import { KPI, Badge, Modal, Prog, Field, Inp, Sel } from '../components/common/UI';
 import { ROLES, useAuth } from '../contexts/AuthContext';
 import { invoiceService } from '../services/invoiceService';
+import { advertiserService } from '../services/advertiserService';
 import { lsl, fmtDate } from '../utils/helpers';
 
 const initialContracts = [
@@ -15,6 +16,25 @@ const initialContracts = [
   { id:'ADC007', client:'Lesotho Post Bank',     campaign:'Digital Banking Push',type:'Radio Spots',   spots:75,  aired:0,   startDate:'2026-04-01', endDate:'2026-04-30', value:22000,  ratePerSpot:293, status:'Upcoming'  },
 ];
 
+const normalizeContract = (contract) => ({
+  id: contract.id || contract._id || `ADC${Date.now()}`,
+  client: contract.client || contract.advertiser || 'Unknown',
+  campaign: contract.campaign || 'Campaign',
+  type: contract.type || 'Ad Contract',
+  spots: Number(contract.spots || 0),
+  aired: Number(contract.aired || 0),
+  startDate: contract.startDate || '',
+  endDate: contract.endDate || '',
+  value: Number(contract.value || contract.amount || 0),
+  ratePerSpot: Number(contract.ratePerSpot || 0),
+  status: contract.status
+    ? contract.status === 'PENDING' ? 'Pending'
+      : contract.status === 'APPROVED' ? 'Active'
+      : contract.status === 'REJECTED' ? 'Rejected'
+      : contract.status
+    : 'Pending'
+});
+
 const AD_TYPES = ['Radio Spots','Sponsorship','Jingle + Spots','Programme Sponsorship','Outside Broadcast','Digital Streaming'];
 const TIME_SLOTS = ['Morning Drive (05:30–08:00)','Mid-Morning (08:00–11:00)','Midday (11:00–14:00)','Afternoon Drive (15:00–18:00)','Evening (18:00–21:00)','Weekend Special'];
 
@@ -25,15 +45,16 @@ const AdContracts = () => {
   const [addOpen, setAddOpen]     = useState(false);
   const [viewItem, setViewItem]   = useState(null);
   const [filter, setFilter]       = useState('all');
+  const [contractLoading, setContractLoading] = useState(true);
   const blank = { client:'', campaign:'', type:'Radio Spots', spots:'', aired:0, startDate:'', endDate:'', value:'', ratePerSpot:'', status:'Pending' };
   const [form, setForm]           = useState(blank);
   const [invoices, setInvoices]   = useState([]);
   const [invoiceLoading, setInvoiceLoading] = useState(true);
 
-  const totalValue   = contracts.reduce((s,c) => s + c.value, 0);
-  const activeVal    = contracts.filter(c=>c.status==='Active').reduce((s,c)=>s+c.value, 0);
-  const totalSpots   = contracts.reduce((s,c) => s + c.spots, 0);
-  const totalAired   = contracts.reduce((s,c) => s + c.aired, 0);
+  const totalValue   = contracts.reduce((s,c) => s + Number(c.value || c.amount || 0), 0);
+  const activeVal    = contracts.filter(c => c.status === 'Active').reduce((s,c) => s + Number(c.value || c.amount || 0), 0);
+  const totalSpots   = contracts.reduce((s,c) => s + Number(c.spots || 0), 0);
+  const totalAired   = contracts.reduce((s,c) => s + Number(c.aired || 0), 0);
   const rateValues   = invoices.flatMap(inv => inv.items || []).map(item => item.rate || 0);
   const uniqueRates  = new Set(rateValues).size;
   const pendingInvoices = invoices.filter(inv => inv.status === 'PENDING' || inv.status === 'SENT').length;
@@ -42,10 +63,47 @@ const AdContracts = () => {
 
   const filtered = filter === 'all' ? contracts : contracts.filter(c => c.status === filter);
 
-  const save = () => {
-    if (!form.client || !form.value) return;
-    setContracts([{ id:`ADC${Date.now()}`, ...form, spots:Number(form.spots), aired:0, value:Number(form.value), ratePerSpot:Number(form.ratePerSpot||0) }, ...contracts]);
-    setAddOpen(false); setForm(blank);
+  const save = async () => {
+    if (!form.client || !form.value || !form.startDate || !form.endDate) return;
+
+    try {
+      const payload = {
+        advertiser: form.client,
+        campaign: form.campaign,
+        type: form.type,
+        spots: Number(form.spots || 0),
+        aired: Number(form.aired || 0),
+        ratePerSpot: Number(form.ratePerSpot || 0),
+        amount: Number(form.value),
+        status: form.status?.toUpperCase() === 'ACTIVE' ? 'APPROVED' : form.status?.toUpperCase() === 'REJECTED' ? 'REJECTED' : 'PENDING',
+        startDate: form.startDate,
+        endDate: form.endDate
+      };
+
+      const saved = await advertiserService.createAdContract(payload);
+      const normalized = normalizeContract({ ...saved, client: form.client, campaign: form.campaign, type: form.type, spots: Number(form.spots || 0), aired: Number(form.aired || 0), ratePerSpot: Number(form.ratePerSpot || 0), value: Number(form.value) });
+      setContracts(prev => [normalized, ...prev]);
+      setAddOpen(false);
+      setForm(blank);
+      window.dispatchEvent(new Event('contractsUpdated'));
+    } catch (error) {
+      console.error('Failed to save contract:', error);
+    }
+  };
+
+  const loadContracts = async () => {
+    try {
+      setContractLoading(true);
+      const data = await advertiserService.getAdContracts();
+      if (Array.isArray(data)) {
+        setContracts(data.map(normalizeContract));
+      }
+    } catch (error) {
+      console.error('Failed to load contracts:', error);
+      setContracts(initialContracts);
+    } finally {
+      setContractLoading(false);
+    }
   };
 
   const loadInvoices = async () => {
@@ -62,10 +120,16 @@ const AdContracts = () => {
 
   useEffect(() => {
     loadInvoices();
+    loadContracts();
 
-    const handleUpdate = () => loadInvoices();
-    window.addEventListener('invoicesUpdated', handleUpdate);
-    return () => window.removeEventListener('invoicesUpdated', handleUpdate);
+    const handleInvoiceUpdate = () => loadInvoices();
+    const handleContractUpdate = () => loadContracts();
+    window.addEventListener('invoicesUpdated', handleInvoiceUpdate);
+    window.addEventListener('contractsUpdated', handleContractUpdate);
+    return () => {
+      window.removeEventListener('invoicesUpdated', handleInvoiceUpdate);
+      window.removeEventListener('contractsUpdated', handleContractUpdate);
+    };
   }, []);
 
   const statusColor = { Active:'var(--green)', Completed:'var(--blue)', Pending:'var(--orange)', Upcoming:'var(--purple)' };
@@ -157,10 +221,11 @@ const AdContracts = () => {
           </thead>
           <tbody>
             {filtered.map(c => {
-              const delivPct = c.spots > 0 ? Math.round((c.aired/c.spots)*100) : 0;
+              const delivPct = c.spots > 0 ? Math.round((Number(c.aired || 0) / Number(c.spots || 0)) * 100) : 0;
+              const rowId = c.id || c._id;
               return (
-                <tr key={c.id}>
-                  <td style={{color:'var(--gold)',fontFamily:'var(--font-display)',fontSize:'0.8rem'}}>{c.id}</td>
+                <tr key={rowId}>
+                  <td style={{color:'var(--gold)',fontFamily:'var(--font-display)',fontSize:'0.8rem'}}>{rowId}</td>
                   <td><b>{c.client}</b></td>
                   <td style={{fontSize:'0.82rem'}}>{c.campaign}</td>
                   <td><span style={{fontSize:'0.75rem',fontWeight:600,color:'var(--blue)'}}>{c.type}</span></td>
@@ -168,7 +233,7 @@ const AdContracts = () => {
                     <div>{fmtDate(c.startDate)}</div>
                     <div style={{color:'var(--text-muted)'}}>→ {fmtDate(c.endDate)}</div>
                   </td>
-                  <td style={{textAlign:'right',fontFamily:'var(--font-display)',fontWeight:700,color:'var(--text-primary)'}}>{lsl(c.value)}</td>
+                  <td style={{textAlign:'right',fontFamily:'var(--font-display)',fontWeight:700,color:'var(--text-primary)'}}>{lsl(Number(c.value || c.amount || 0))}</td>
                   <td style={{fontFamily:'var(--font-display)',fontSize:'0.85rem'}}>
                     <span style={{color:'var(--text-primary)'}}>{c.aired}</span>
                     <span style={{color:'var(--text-muted)'}}>/{c.spots}</span>
@@ -189,7 +254,7 @@ const AdContracts = () => {
       </div>
 
       {/* View modal */}
-      <Modal open={!!viewItem} onClose={() => setViewItem(null)} title={`Contract — ${viewItem?.id}`}>
+      <Modal open={!!viewItem} onClose={() => setViewItem(null)} title={`Contract — ${viewItem?.id || viewItem?._id}`}>
         {viewItem && (
           <div>
             <div style={{background:'var(--bg-hover)',borderRadius:10,padding:'14px 16px',marginBottom:18}}>

@@ -278,6 +278,12 @@ const Dashboard = () => {
   }, []);
 
   useEffect(() => {
+    const handleContractsUpdated = () => loadData();
+    window.addEventListener('contractsUpdated', handleContractsUpdated);
+    return () => window.removeEventListener('contractsUpdated', handleContractsUpdated);
+  }, []);
+
+  useEffect(() => {
     if (!monthlyTrend.labels || monthlyTrend.labels.length === 0) return;
 
     try {
