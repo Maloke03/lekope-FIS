@@ -16,6 +16,7 @@ const Revenue = () => {
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState({ totalYTD: 0, avgGrowth: 0, activeContracts: 0 });
   const [streams, setStreams] = useState([]);
+  const [monthlyData, setMonthlyData] = useState(null);
   const [addOpen, setAddOpen] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState(null);
@@ -49,9 +50,7 @@ const Revenue = () => {
       setTxns(revenueData);
       setSummary(summaryData);
       setStreams(streamsData);
-      
-      // Update chart
-      updateChart(monthlyData);
+      setMonthlyData(monthlyData);
     } catch (error) {
       console.error('Error loading data:', error);
       toast.error('Failed to load revenue data');
@@ -60,7 +59,12 @@ const Revenue = () => {
     }
   };
 
-  const updateChart = (monthlyData) => {
+  const updateChart = (data) => {
+    // Guard: ensure canvas ref exists and has data
+    if (!barRef.current || !data) {
+      return;
+    }
+
     if (barChart.current) {
       barChart.current.destroy();
     }
@@ -68,12 +72,12 @@ const Revenue = () => {
     barChart.current = new Chart(barRef.current, {
       type: 'bar',
       data: {
-        labels: monthlyData.labels,
+        labels: data.labels,
         datasets: [
-          { label: 'Advertising', data: monthlyData.advertising, backgroundColor: 'rgba(245,197,24,0.8)', borderRadius: 3 },
-          { label: 'Sponsorships', data: monthlyData.sponsorships, backgroundColor: 'rgba(59,130,246,0.75)', borderRadius: 3 },
-          { label: 'Events', data: monthlyData.events, backgroundColor: 'rgba(34,197,94,0.75)', borderRadius: 3 },
-          { label: 'Digital', data: monthlyData.digital, backgroundColor: 'rgba(96,165,250,0.8)', borderRadius: 3 },
+          { label: 'Advertising', data: data.advertising, backgroundColor: 'rgba(245,197,24,0.8)', borderRadius: 3 },
+          { label: 'Sponsorships', data: data.sponsorships, backgroundColor: 'rgba(59,130,246,0.75)', borderRadius: 3 },
+          { label: 'Events', data: data.events, backgroundColor: 'rgba(34,197,94,0.75)', borderRadius: 3 },
+          { label: 'Digital', data: data.digital, backgroundColor: 'rgba(96,165,250,0.8)', borderRadius: 3 },
         ],
       },
       options: {
@@ -111,6 +115,18 @@ const Revenue = () => {
       }
     };
   }, []);
+
+  // Initialize chart when data is loaded and canvas is ready
+  useEffect(() => {
+    if (monthlyData && barRef.current) {
+      updateChart(monthlyData);
+    }
+    return () => {
+      if (barChart.current) {
+        barChart.current.destroy();
+      }
+    };
+  }, [monthlyData]);
 
   const saveRevenue = async () => {
     if (!form.client || !form.amount) {
