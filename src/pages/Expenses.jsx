@@ -5,6 +5,7 @@ import { KPI, Modal, Field, Inp, Sel, Prog } from '../components/common/UI';
 import { expenseService } from '../services/expenseService';
 import { useAuth, ROLES } from '../contexts/AuthContext';
 import { formatCurrency } from '../utils/invoiceUtils';
+import { getApiErrorMessage, isBrowserOffline, isNetworkError } from '../utils/network';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -12,6 +13,27 @@ Chart.register(...registerables);
 
 const catColors = ['#f5c518', '#3b82f6', '#22c55e', '#a855f7', '#f97316', '#14b8a6', '#ef4444'];
 const distColors = ['#f5c518', '#3b82f6', '#22c55e', '#a855f7', '#f97316', '#14b8a6', '#ef4444'];
+const CATEGORIES = ['Salaries', 'Licensing', 'Equipment', 'Utilities', 'Marketing', 'Operations', 'Other'];
+const STATUSES = ['PENDING', 'APPROVED', 'PAID', 'REJECTED'];
+const APPROVAL_THRESHOLD = 5000;
+const DEFAULT_MONTHLY_EXPENSES = {
+  labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+  salaries: [],
+  operations: [],
+  marketing: [],
+  other: []
+};
+
+const createDefaultCategories = () =>
+  CATEGORIES.map(name => ({ name, actual: 0, budget: 0, used: 0 }));
+
+const normalizeMonthlyExpenses = (monthlyData = DEFAULT_MONTHLY_EXPENSES) => ({
+  labels: Array.isArray(monthlyData?.labels) && monthlyData.labels.length ? monthlyData.labels : DEFAULT_MONTHLY_EXPENSES.labels,
+  salaries: Array.isArray(monthlyData?.salaries) ? monthlyData.salaries : [],
+  operations: Array.isArray(monthlyData?.operations) ? monthlyData.operations : [],
+  marketing: Array.isArray(monthlyData?.marketing) ? monthlyData.marketing : [],
+  other: Array.isArray(monthlyData?.other) ? monthlyData.other : []
+});
 
 const Expenses = () => {
   const barRef = useRef();
@@ -29,6 +51,7 @@ const Expenses = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
+  const [monthlyExpenses, setMonthlyExpenses] = useState(DEFAULT_MONTHLY_EXPENSES);
 
   const blank = {
     description: '',
@@ -41,50 +64,67 @@ const Expenses = () => {
   };
   const [form, setForm] = useState(blank);
 
-  const CATEGORIES = ['Salaries', 'Licensing', 'Equipment', 'Utilities', 'Marketing', 'Operations', 'Other'];
-  const STATUSES = ['PENDING', 'APPROVED', 'PAID', 'REJECTED'];
-  const APPROVAL_THRESHOLD = 5000;
-
   // Load all data
   const loadData = async () => {
     try {
       setLoading(true);
+
+      const fetchWithFallback = async (fn, fallback) => {
+        if (isBrowserOffline()) return fallback;
+
+        try {
+          return await fn();
+        } catch (error) {
+          if (!isNetworkError(error)) {
+            console.warn('Expense API call failed, using fallback:', getApiErrorMessage(error));
+          }
+          return fallback;
+        }
+      };
+
       const [expensesData, summaryData, categoriesData, monthlyData] = await Promise.all([
-        expenseService.getExpenses(),
-        expenseService.getExpenseSummary(),
-        expenseService.getExpenseCategories(),
-        expenseService.getMonthlyExpenses()
+        fetchWithFallback(() => expenseService.getExpenses(), []),
+        fetchWithFallback(() => expenseService.getExpenseSummary(), { total: 0, budget: 0, budgetUsed: 0, pendingApproval: 0 }),
+        fetchWithFallback(() => expenseService.getExpenseCategories(), createDefaultCategories()),
+        fetchWithFallback(() => expenseService.getMonthlyExpenses(), DEFAULT_MONTHLY_EXPENSES)
       ]);
       
-      setExpenses(expensesData);
-      setSummary(summaryData);
-      setCategories(categoriesData);
-      
-      // Update charts
-      updateBarChart(monthlyData);
-      updatePieChart(categoriesData);
+      setExpenses(Array.isArray(expensesData) ? expensesData : []);
+      setSummary(summaryData || { total: 0, budget: 0, budgetUsed: 0, pendingApproval: 0 });
+      setCategories(Array.isArray(categoriesData) && categoriesData.length ? categoriesData : createDefaultCategories());
+      setMonthlyExpenses(normalizeMonthlyExpenses(monthlyData));
     } catch (error) {
-      console.error('Error loading data:', error);
-      toast.error('Failed to load expense data');
+      if (!isNetworkError(error)) {
+        console.error('Error loading data:', error);
+        toast.error('Failed to load expense data');
+      }
+      setExpenses([]);
+      setSummary({ total: 0, budget: 0, budgetUsed: 0, pendingApproval: 0 });
+      setCategories(createDefaultCategories());
+      setMonthlyExpenses(DEFAULT_MONTHLY_EXPENSES);
     } finally {
       setLoading(false);
     }
   };
 
   const updateBarChart = (monthlyData) => {
+    if (!barRef.current) return;
+
     if (barChart.current) {
       barChart.current.destroy();
     }
+
+    const safeMonthlyData = normalizeMonthlyExpenses(monthlyData);
     
     barChart.current = new Chart(barRef.current, {
       type: 'bar',
       data: {
-        labels: monthlyData.labels,
+        labels: safeMonthlyData.labels,
         datasets: [
-          { label: 'Salaries', data: monthlyData.salaries, backgroundColor: 'rgba(245,197,24,0.8)', borderRadius: 3 },
-          { label: 'Operations', data: monthlyData.operations, backgroundColor: 'rgba(249,115,22,0.8)', borderRadius: 3 },
-          { label: 'Marketing', data: monthlyData.marketing, backgroundColor: 'rgba(59,130,246,0.8)', borderRadius: 3 },
-          { label: 'Other', data: monthlyData.other, backgroundColor: 'rgba(168,85,247,0.8)', borderRadius: 3 },
+          { label: 'Salaries', data: safeMonthlyData.salaries, backgroundColor: 'rgba(245,197,24,0.8)', borderRadius: 3 },
+          { label: 'Operations', data: safeMonthlyData.operations, backgroundColor: 'rgba(249,115,22,0.8)', borderRadius: 3 },
+          { label: 'Marketing', data: safeMonthlyData.marketing, backgroundColor: 'rgba(59,130,246,0.8)', borderRadius: 3 },
+          { label: 'Other', data: safeMonthlyData.other, backgroundColor: 'rgba(168,85,247,0.8)', borderRadius: 3 },
         ],
       },
       options: {
@@ -114,19 +154,22 @@ const Expenses = () => {
   };
 
   const updatePieChart = (categoriesData) => {
+    if (!pieRef.current) return;
+
     if (pieChart.current) {
       pieChart.current.destroy();
     }
     
-    const total = categoriesData.reduce((sum, c) => sum + c.actual, 0);
-    const percentages = categoriesData.map(c => ((c.actual / total) * 100).toFixed(1));
+    const safeCategories = Array.isArray(categoriesData) && categoriesData.length ? categoriesData : createDefaultCategories();
+    const total = safeCategories.reduce((sum, c) => sum + Number(c.actual || 0), 0);
+    const hasExpenseData = total > 0;
     
     pieChart.current = new Chart(pieRef.current, {
       type: 'pie',
       data: {
-        labels: categoriesData.map(c => c.name),
+        labels: hasExpenseData ? safeCategories.map(c => c.name) : ['No expenses'],
         datasets: [{
-          data: categoriesData.map(c => c.actual),
+          data: hasExpenseData ? safeCategories.map(c => Number(c.actual || 0)) : [1],
           backgroundColor: distColors,
           borderColor: '#141f35',
           borderWidth: 2,
@@ -148,7 +191,7 @@ const Expenses = () => {
               label: (ctx) => {
                 const label = ctx.label || '';
                 const value = ctx.parsed || 0;
-                const percentage = ((value / total) * 100).toFixed(1);
+                const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0';
                 return `${label}: ${formatCurrency(value)} (${percentage}%)`;
               }
             }
@@ -157,6 +200,12 @@ const Expenses = () => {
       },
     });
   };
+
+  useEffect(() => {
+    if (loading) return;
+    updateBarChart(monthlyExpenses);
+    updatePieChart(categories);
+  }, [loading, monthlyExpenses, categories]);
 
   useEffect(() => {
     loadData();

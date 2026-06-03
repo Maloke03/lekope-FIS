@@ -23,6 +23,7 @@ import dashboardAccent from '../images/landing-hero.jpg';
 import financeDash1 from '../images/finance_dash1.jpg';
 import financeDash2 from '../images/finance_dash2.jpg';
 import financeDash3 from '../images/finance_dash3.jpg';
+import { getApiErrorMessage, isBrowserOffline, isNetworkError } from '../utils/network';
 
 Chart.register(...registerables);
 
@@ -123,10 +124,14 @@ const Dashboard = () => {
 
       // Fetch all data with individual error handling
       const fetchWithFallback = async (fn, fallback = null) => {
+        if (isBrowserOffline()) return fallback;
+
         try {
           return await fn();
         } catch (error) {
-          console.warn(`API call failed, using fallback:`, error.message);
+          if (!isNetworkError(error)) {
+            console.warn('API call failed, using fallback:', getApiErrorMessage(error));
+          }
           return fallback;
         }
       };
@@ -286,7 +291,34 @@ const Dashboard = () => {
   }, []);
 
   useEffect(() => {
-    if (!monthlyTrend.labels || monthlyTrend.labels.length === 0) return;
+    if (loading || !monthlyTrend.labels || monthlyTrend.labels.length === 0) return;
+
+    const requiredRefs = [
+      lineRef,
+      pieRef,
+      profitRef,
+      expensePieRef,
+      moduleHealthRef,
+      recentActivityRef,
+      bookingsRef,
+      advertisersRef,
+      payrollRef,
+      adContractsRef,
+      monthlyExpenseRef,
+      budgetActualRef,
+      quarterlyForecastRef,
+      revenueCompositionRef,
+    ];
+
+    if (isStationManager) {
+      requiredRefs.push(invoiceStatusRef, userActivityRef);
+    }
+
+    if (isFinanceOfficer) {
+      requiredRefs.push(revenueSourcesRef, cashFlowRef, assetLiabilityRef);
+    }
+
+    if (requiredRefs.some(ref => !ref.current)) return;
 
     try {
       // Revenue vs Expenses Trend Line Chart
@@ -445,7 +477,7 @@ const Dashboard = () => {
 
       // Revenue Sources Chart (Finance Officer)
       revenueSourcesChart.current?.destroy();
-      if (isFinanceOfficer && financialData?.incomeStatement?.revenue && Array.isArray(financialData.incomeStatement.revenue) && financialData.incomeStatement.revenue.length > 0) {
+      if (revenueSourcesRef.current && isFinanceOfficer && financialData?.incomeStatement?.revenue && Array.isArray(financialData.incomeStatement.revenue) && financialData.incomeStatement.revenue.length > 0) {
         revenueSourcesChart.current = new Chart(revenueSourcesRef.current, {
           type: 'pie',
           data: {
@@ -478,7 +510,7 @@ const Dashboard = () => {
 
       // Cash Flow Trend Chart (Finance Officer)
       cashFlowChart.current?.destroy();
-      if (isFinanceOfficer && financialData?.cashFlowData) {
+      if (cashFlowRef.current && isFinanceOfficer && financialData?.cashFlowData) {
         const cashFlowData = financialData.cashFlowData;
         cashFlowChart.current = new Chart(cashFlowRef.current, {
           type: 'line',
@@ -996,7 +1028,7 @@ const Dashboard = () => {
 
       // Invoice Status Chart (Station Manager)
       invoiceStatusChart.current?.destroy();
-      if (isStationManager && invoices && invoices.length > 0) {
+      if (invoiceStatusRef.current && isStationManager && invoices && invoices.length > 0) {
         const statusCounts = invoices.reduce((acc, invoice) => {
           acc[invoice.status || 'DRAFT'] = (acc[invoice.status || 'DRAFT'] || 0) + 1;
           return acc;
@@ -1034,7 +1066,7 @@ const Dashboard = () => {
 
       // Asset vs Liability Chart (Finance Officer)
       assetLiabilityChart.current?.destroy();
-      if (isFinanceOfficer && financialData?.balanceSheet) {
+      if (assetLiabilityRef.current && isFinanceOfficer && financialData?.balanceSheet) {
         const balanceSheet = financialData.balanceSheet;
         assetLiabilityChart.current = new Chart(assetLiabilityRef.current, {
           type: 'bar',
@@ -1092,7 +1124,8 @@ const Dashboard = () => {
     payrollSummary,
     budgetSummary,
     expenseMonthlyData,
-    revenueMonthlyData
+    revenueMonthlyData,
+    loading
   ]);
 
   // Cleanup on unmount
