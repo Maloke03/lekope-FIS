@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { TrendingUp, TrendingDown, Zap, RefreshCw } from 'lucide-react';
+import { TrendingUp, TrendingDown, Zap, RefreshCw, DollarSign, BarChart3, Users, AlertCircle } from 'lucide-react';
 import { Chart, registerables } from 'chart.js';
 import { analyticsService } from '../services/analyticsService';
 import { lsl } from '../utils/helpers';
@@ -11,6 +11,9 @@ const Analytics = () => {
   const pieRef = useRef(); const pieChart = useRef();
   const radarRef = useRef(); const radarChart = useRef();
   const qtrRef = useRef(); const qtrChart = useRef();
+  const sourceRef = useRef(); const sourceChart = useRef();
+  const budgetRef = useRef(); const budgetChart = useRef();
+  const forecastRef = useRef(); const forecastChart = useRef();
 
   const emptyAnalytics = {
     kpis: {
@@ -20,6 +23,18 @@ const Analytics = () => {
       clientAcquisitionCost: 0
     },
     profitTrend: { labels: [], revenue: [], expenses: [], profit: [] },
+    revenueSources: [],
+    expenseCategories: [],
+    arAging: [],
+    financeSummary: {
+      cashPosition: 0,
+      workingCapital: 0,
+      cashRunwayMonths: 0,
+      receivablesOutstanding: 0,
+      currentPayables: 0
+    },
+    forecast: { labels: [], revenue: [], expenses: [], profit: [] },
+    forecastSummary: { nextQuarterRevenue: 0, nextQuarterExpenses: 0, projectedProfit: 0 },
     topClients: [],
     scorecard: [],
     quarterlyPerformance: { labels: [], revenue: [], profit: [], margins: [] },
@@ -51,6 +66,12 @@ const Analytics = () => {
     ...data,
     kpis: { ...emptyAnalytics.kpis, ...(data?.kpis || {}) },
     profitTrend: { ...emptyAnalytics.profitTrend, ...(data?.profitTrend || {}) },
+    revenueSources: data?.revenueSources || [],
+    expenseCategories: data?.expenseCategories || [],
+    arAging: data?.arAging || [],
+    financeSummary: { ...emptyAnalytics.financeSummary, ...(data?.financeSummary || {}) },
+    forecast: { ...emptyAnalytics.forecast, ...(data?.forecast || {}) },
+    forecastSummary: { ...emptyAnalytics.forecastSummary, ...(data?.forecastSummary || {}) },
     quarterlyPerformance: { ...emptyAnalytics.quarterlyPerformance, ...(data?.quarterlyPerformance || {}) },
     topClients: data?.topClients || [],
     scorecard: data?.scorecard || [],
@@ -226,11 +247,139 @@ const Analytics = () => {
       }
     });
 
+    sourceChart.current?.destroy();
+    sourceChart.current = new Chart(sourceRef.current, {
+      type: 'doughnut',
+      data: {
+        labels: safeData.revenueSources.map(r => r.name),
+        datasets: [{
+          data: safeData.revenueSources.map(r => r.amount),
+          backgroundColor: ['#f5c518', '#3b82f6', '#22c55e', '#a855f7', '#64748b'],
+          borderColor: '#141f35',
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { color: '#8ba0bc', boxWidth: 10, padding: 10 } },
+          tooltip: {
+            backgroundColor: '#141f35',
+            borderColor: '#1e2e48',
+            borderWidth: 1,
+            titleColor: '#eef2f8',
+            bodyColor: '#8ba0bc',
+            callbacks: {
+              label: (ctx) => `${ctx.label}: ${lsl(ctx.parsed)} (${safeData.revenueSources[ctx.dataIndex]?.pct || 0}%)`
+            }
+          }
+        }
+      }
+    });
+
+    budgetChart.current?.destroy();
+    budgetChart.current = new Chart(budgetRef.current, {
+      type: 'bar',
+      data: {
+        labels: safeData.expenseCategories.map(c => c.category),
+        datasets: [
+          { label: 'Actual', data: safeData.expenseCategories.map(c => c.actual), backgroundColor: 'rgba(239,68,68,0.65)', borderRadius: 4 },
+          { label: 'Budget', data: safeData.expenseCategories.map(c => c.budget), backgroundColor: 'rgba(34,197,94,0.55)', borderRadius: 4 }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { labels: { color: '#8ba0bc', boxWidth: 12, padding: 14 } },
+          tooltip: {
+            backgroundColor: '#141f35',
+            borderColor: '#1e2e48',
+            borderWidth: 1,
+            titleColor: '#eef2f8',
+            bodyColor: '#8ba0bc',
+            callbacks: {
+              label: (ctx) => `${ctx.dataset.label}: ${lsl(ctx.parsed.y)}`
+            }
+          }
+        },
+        scales: {
+          x: { grid: { color: '#1e2e4855' }, ticks: { color: '#8ba0bc' } },
+          y: { grid: { color: '#1e2e4855' }, ticks: { color: '#8ba0bc', callback: v => `${(v / 1000).toFixed(0)}k` }, beginAtZero: true }
+        }
+      }
+    });
+
+    forecastChart.current?.destroy();
+    forecastChart.current = new Chart(forecastRef.current, {
+      type: 'line',
+      data: {
+        labels: safeData.forecast.labels,
+        datasets: [
+          {
+            label: 'Projected Revenue',
+            data: safeData.forecast.revenue,
+            borderColor: '#f5c518',
+            backgroundColor: 'rgba(245,197,24,0.15)',
+            tension: 0.35,
+            fill: false,
+            pointRadius: 4,
+            borderWidth: 2
+          },
+          {
+            label: 'Projected Expense',
+            data: safeData.forecast.expenses,
+            borderColor: '#ef4444',
+            backgroundColor: 'rgba(239,68,68,0.15)',
+            tension: 0.35,
+            fill: false,
+            pointRadius: 4,
+            borderWidth: 2
+          },
+          {
+            label: 'Projected Profit',
+            data: safeData.forecast.profit,
+            borderColor: '#22c55e',
+            backgroundColor: 'rgba(34,197,94,0.15)',
+            tension: 0.35,
+            fill: true,
+            pointRadius: 4,
+            borderWidth: 2
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { labels: { color: '#8ba0bc', boxWidth: 12, padding: 14 } },
+          tooltip: {
+            backgroundColor: '#141f35',
+            borderColor: '#1e2e48',
+            borderWidth: 1,
+            titleColor: '#eef2f8',
+            bodyColor: '#8ba0bc',
+            callbacks: {
+              label: (ctx) => ` ${ctx.dataset.label}: ${lsl(ctx.parsed.y)}`
+            }
+          }
+        },
+        scales: {
+          x: { grid: { color: '#1e2e4855' }, ticks: { color: '#8ba0bc' } },
+          y: { grid: { color: '#1e2e4855' }, ticks: { color: '#8ba0bc', callback: v => `${(v / 1000).toFixed(0)}k` }, beginAtZero: true }
+        }
+      }
+    });
+
     return () => {
       profitChart.current?.destroy();
       pieChart.current?.destroy();
       radarChart.current?.destroy();
       qtrChart.current?.destroy();
+      sourceChart.current?.destroy();
+      budgetChart.current?.destroy();
+      forecastChart.current?.destroy();
     };
   }, [data]);
 
@@ -287,14 +436,98 @@ const Analytics = () => {
         </div>
       </div>
 
+      <div className="g4" style={{ marginBottom: 20 }}>
+        <div className="card" style={{ padding: '18px 20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+            <DollarSign size={14} color="var(--green)" />
+            <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Cash Position</span>
+          </div>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', fontWeight: 700, color: 'var(--green)' }}>{lsl(safeData.financeSummary.cashPosition)}</div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 3 }}>Available cash after payables</div>
+        </div>
+
+        <div className="card" style={{ padding: '18px 20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+            <BarChart3 size={14} color="var(--green)" />
+            <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Cash Runway</span>
+          </div>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', fontWeight: 700, color: 'var(--green)' }}>{safeData.financeSummary.cashRunwayMonths} months</div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 3 }}>Projected coverage at current expense pace</div>
+        </div>
+
+        <div className="card" style={{ padding: '18px 20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+            <Users size={14} color="var(--gold)" />
+            <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Working Capital</span>
+          </div>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', fontWeight: 700, color: 'var(--gold)' }}>{lsl(safeData.financeSummary.workingCapital)}</div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 3 }}>Receivables plus cash minus payables</div>
+        </div>
+
+        <div className="card" style={{ padding: '18px 20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+            <AlertCircle size={14} color="var(--red)" />
+            <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Receivables Aging</span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10 }}>
+            {safeData.arAging.map((bucket) => (
+              <div key={bucket.bucket} style={{ padding: 10, borderRadius: 10, background: 'var(--bg-hover)' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{bucket.bucket}</div>
+                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)' }}>{lsl(bucket.amount)}</div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: 4 }}>{bucket.count} invoices</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
       <div className="card" style={{ marginBottom: 20 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
           <div>
             <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.05rem', color: 'var(--gold)' }}>Profitability Trend</div>
             <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>Revenue, expenses, and profit over the last 8 months</div>
           </div>
+          <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Forecasted next quarter revenue: {lsl(safeData.forecastSummary.nextQuarterRevenue)}</div>
         </div>
         <div style={{ height: 300 }}><canvas ref={profitRef} /></div>
+      </div>
+
+      <div className="g2" style={{ marginBottom: 20 }}>
+        <div className="card">
+          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--gold)', marginBottom: 16 }}>Revenue Source Mix</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+            <div style={{ flex: '0 0 220px', height: 220 }}><canvas ref={sourceRef} /></div>
+            <div style={{ flex: 1 }}>
+              {safeData.revenueSources.map((source) => (
+                <div key={source.name} style={{ marginBottom: 12 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: 4 }}>
+                    <span style={{ color: 'var(--text-secondary)' }}>{source.name}</span>
+                    <span style={{ color: 'var(--gold)' }}>{source.pct}%</span>
+                  </div>
+                  <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, color: 'var(--text-primary)' }}>{lsl(source.amount)}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--gold)', marginBottom: 16 }}>Expense vs Budget</div>
+          <div style={{ height: 260 }}><canvas ref={budgetRef} /></div>
+        </div>
+      </div>
+
+      <div className="card" style={{ marginBottom: 20 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+          <div>
+            <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--gold)' }}>Next Quarter Forecast</div>
+            <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>Projected revenue, expenses, and profit for the next 3 months</div>
+          </div>
+          <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+            Revenue: {lsl(safeData.forecastSummary.nextQuarterRevenue)} • Expenses: {lsl(safeData.forecastSummary.nextQuarterExpenses)}
+          </div>
+        </div>
+        <div style={{ height: 300 }}><canvas ref={forecastRef} /></div>
       </div>
 
       <div className="g2" style={{ marginBottom: 20 }}>

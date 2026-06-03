@@ -1193,6 +1193,10 @@ const Dashboard = () => {
   const paidInvoiceCount = invoices.filter(invoice => invoice.status === 'PAID').length;
   const securedInvoiceCount = invoices.filter(invoice => invoice.blockchainLedgerTip).length;
   const analyticsHealth = analyticsOverview?.summary || analyticsOverview || null;
+  const financeSummary = analyticsOverview?.financeSummary || {};
+  const arAging = Array.isArray(analyticsOverview?.arAging) ? analyticsOverview.arAging : [];
+  const expenseCategoriesOverview = Array.isArray(analyticsOverview?.expenseCategories) ? analyticsOverview.expenseCategories : [];
+  const forecastSummary = analyticsOverview?.forecastSummary || {};
   const moduleHealthRows = [
     {
       module: 'Invoices',
@@ -1325,6 +1329,80 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
+
+      {analyticsOverview && (
+        <>
+          <div className="g4" style={{ marginBottom: 20 }}>
+            <KPI title="Cash Position" value={lsl(financeSummary.cashPosition || 0)} sub="Available cash after payables" icon={DollarSign} accent="var(--green)" />
+            <KPI title="Working Capital" value={lsl(financeSummary.workingCapital || 0)} sub="Receivables + cash - payables" icon={Users} accent="var(--gold)" />
+            <KPI title="Cash Runway" value={`${financeSummary.cashRunwayMonths || 0} months`} sub="Projected coverage" icon={BarChart3} accent="var(--blue)" />
+            <KPI title="Receivables Outstanding" value={lsl(financeSummary.receivablesOutstanding || 0)} sub="Uncollected invoice balance" icon={AlertCircle} accent="var(--red)" />
+          </div>
+
+          <div className="g2" style={{ marginBottom: 20 }}>
+            <div className="card dashboard-card--premium">
+              <div className="sec-head"><span className="sec-title">Expense Categories</span></div>
+              <div style={{ padding: '18px 20px' }}>
+                {expenseCategoriesOverview.length > 0 ? (
+                  expenseCategoriesOverview.slice(0, 5).map((category) => (
+                    <div key={category.category} style={{ marginBottom: 14 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                        <span>{category.category}</span>
+                        <span>{category.usage}%</span>
+                      </div>
+                      <div className="prog" style={{ height: 8, borderRadius: 6, background: 'var(--bg-hover)' }}>
+                        <div className="prog-fill" style={{ width: `${Math.min(100, category.usage)}%`, background: 'linear-gradient(90deg, #ef4444, #f97316)' }} />
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, color: 'var(--text-muted)', fontSize: '0.78rem' }}>
+                        <span>{lsl(category.actual)}</span>
+                        <span>Budget {lsl(category.budget)}</span>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div style={{ textAlign: 'center', padding: 30, color: 'var(--text-muted)' }}>Expense category details unavailable.</div>
+                )}
+              </div>
+            </div>
+
+            <div className="card dashboard-card--premium">
+              <div className="sec-head"><span className="sec-title">AR Aging</span></div>
+              <div style={{ padding: '18px 20px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 12 }}>
+                  {arAging.slice(0, 4).map((bucket) => (
+                    <div key={bucket.bucket} style={{ padding: 12, borderRadius: 12, background: 'var(--bg-hover)' }}>
+                      <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{bucket.bucket}</div>
+                      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)' }}>{lsl(bucket.amount)}</div>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: 4 }}>{bucket.count || 0} invoices</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="card dashboard-card--premium" style={{ marginBottom: 20 }}>
+            <div className="sec-head"><span className="sec-title">Next Quarter Projection</span></div>
+            <div style={{ padding: '18px 20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 12, marginBottom: 14 }}>
+                <div style={{ padding: 16, borderRadius: 12, background: 'var(--bg-hover)' }}>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Revenue</div>
+                  <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.1rem' }}>{lsl(forecastSummary.nextQuarterRevenue || 0)}</div>
+                </div>
+                <div style={{ padding: 16, borderRadius: 12, background: 'var(--bg-hover)' }}>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Expenses</div>
+                  <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.1rem' }}>{lsl(forecastSummary.nextQuarterExpenses || 0)}</div>
+                </div>
+                <div style={{ padding: 16, borderRadius: 12, background: 'var(--bg-hover)' }}>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Projected Profit</div>
+                  <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.1rem' }}>{lsl(forecastSummary.projectedProfit || 0)}</div>
+                </div>
+              </div>
+              <div style={{ color: 'var(--text-secondary)', fontSize: '0.86rem' }}>This projection is based on the latest momentum from revenue and expense trends, and helps highlight spend vs cash coverage.</div>
+            </div>
+          </div>
+        </>
+      )}
 
       <div className="g4" style={{ marginBottom: 20 }}>
         <KPI title="Bookings" value={bookingCount} sub="Total campaign bookings" icon={BarChart3} accent="var(--blue)" />

@@ -968,12 +968,130 @@ app.get('/api/analytics/overview', protect, canViewReports, async (req, res) => 
       })
     };
 
+    const categoryBudgets = {
+      Salaries: 150000,
+      Licensing: 90000,
+      Equipment: 85000,
+      Utilities: 60000,
+      Marketing: 95000,
+      Operations: 125000,
+      Other: 50000
+    };
+
+    const revenueSources = Object.entries(
+      revenues.filter((r) => r.status === 'COMPLETED').reduce((acc, r) => {
+        const type = r.type || 'Other';
+        acc[type] = (acc[type] || 0) + r.amount;
+        return acc;
+      }, {})
+    ).map(([name, amount]) => ({ name, amount }));
+
+    const revenueTotal = revenueSources.reduce((sum, item) => sum + item.amount, 0);
+    revenueSources.forEach((item) => {
+      item.pct = revenueTotal > 0 ? Number(((item.amount / revenueTotal) * 100).toFixed(1)) : 0;
+    });
+
+    const expenseCategories = Object.entries(
+      expenses
+        .filter((e) => new Date(e.date).getFullYear() === currentYear)
+        .reduce((acc, e) => {
+          acc[e.category] = (acc[e.category] || 0) + e.amount;
+          return acc;
+        }, {})
+    ).map(([category, actual]) => ({
+      category,
+      actual,
+      budget: categoryBudgets[category] || 0,
+      usage: categoryBudgets[category] ? Number(((actual / categoryBudgets[category]) * 100).toFixed(1)) : 0
+    })).sort((a, b) => b.actual - a.actual);
+
+    const invoiceBuckets = [
+      { bucket: 'Current', amount: 0, count: 0 },
+      { bucket: '1-30 days', amount: 0, count: 0 },
+      { bucket: '31-60 days', amount: 0, count: 0 },
+      { bucket: '60+ days', amount: 0, count: 0 }
+    ];
+
+    invoices
+      .filter((inv) => !['PAID', 'WRITTEN_OFF'].includes(inv.status))
+      .forEach((inv) => {
+        const dueDate = new Date(inv.due);
+        const diffDays = Math.floor((now - dueDate) / (1000 * 60 * 60 * 24));
+        const amount = Math.max(0, inv.amount - (inv.paidAmount || 0));
+
+        if (diffDays < 0) {
+          invoiceBuckets[0].amount += amount;
+          invoiceBuckets[0].count += 1;
+        } else if (diffDays <= 30) {
+          invoiceBuckets[1].amount += amount;
+          invoiceBuckets[1].count += 1;
+        } else if (diffDays <= 60) {
+          invoiceBuckets[2].amount += amount;
+          invoiceBuckets[2].count += 1;
+        } else {
+          invoiceBuckets[3].amount += amount;
+          invoiceBuckets[3].count += 1;
+        }
+      });
+
+    const paidInvoiceAmount = invoices
+      .filter((inv) => inv.status === 'PAID')
+      .reduce((sum, inv) => sum + inv.amount, 0);
+
+    const receivablesOutstanding = invoices
+      .filter((inv) => !['PAID', 'WRITTEN_OFF'].includes(inv.status))
+      .reduce((sum, inv) => sum + Math.max(0, inv.amount - (inv.paidAmount || 0)), 0);
+
+    const currentPayables = expenses
+      .filter((e) => ['PENDING', 'APPROVED'].includes(e.status))
+      .reduce((sum, e) => sum + e.amount, 0);
+
+    const cashPosition = Math.max(0, paidInvoiceAmount - currentPayables);
+    const workingCapital = Math.max(0, paidInvoiceAmount + receivablesOutstanding - currentPayables);
+    const avgLatestExpense = profitExpenses.slice(-3).reduce((sum, value) => sum + value, 0) / Math.max(profitExpenses.slice(-3).length, 1);
+    const cashRunwayMonths = avgLatestExpense > 0 ? Number((cashPosition / avgLatestExpense).toFixed(1)) : 0;
+
+    const monthlyGrowthRates = [];
+    for (let i = 1; i < profitRevenue.length; i += 1) {
+      const prev = profitRevenue[i - 1] || 0;
+      const current = profitRevenue[i] || 0;
+      if (prev > 0) {
+        monthlyGrowthRates.push((current - prev) / prev);
+      }
+    }
+    const avgMonthlyGrowth = monthlyGrowthRates.length
+      ? monthlyGrowthRates.reduce((sum, rate) => sum + rate, 0) / monthlyGrowthRates.length
+      : 0;
+
+    const forecastLabels = [];
+    const forecastRevenue = [];
+    const forecastExpenses = [];
+    const forecastProfit = [];
+    const baseRevenue = profitRevenue.slice(-3).reduce((sum, value) => sum + value, 0) / Math.max(profitRevenue.slice(-3).length, 1);
+    const baseExpense = avgLatestExpense;
+
+    for (let i = 1; i <= 3; i += 1) {
+      const m = new Date(now.getFullYear(), now.getMonth() + i, 1);
+      forecastLabels.push(m.toLocaleString('default', { month: 'short' }));
+      const projectedRevenue = Math.round(baseRevenue * Math.pow(1 + avgMonthlyGrowth, i));
+      const projectedExpense = Math.round(baseExpense * (1 + 0.02 * i));
+      forecastRevenue.push(projectedRevenue);
+      forecastExpenses.push(projectedExpense);
+      forecastProfit.push(projectedRevenue - projectedExpense);
+    }
+
+    const forecastSummary = {
+      nextQuarterRevenue: forecastRevenue.reduce((sum, value) => sum + value, 0),
+      nextQuarterExpenses: forecastExpenses.reduce((sum, value) => sum + value, 0),
+      projectedProfit: forecastProfit.reduce((sum, value) => sum + value, 0)
+    };
+
     const scorecard = [
       { axis: 'Revenue Growth', val: Math.min(100, Math.max(0, Math.round(revenueGrowth))) },
       { axis: 'Profit Margin', val: Math.min(100, Math.max(0, Math.round(profitMargin))) },
-      { axis: 'Client Retention', val: 72 },
       { axis: 'Budget Efficiency', val: Math.min(100, Math.max(0, Math.round(operatingEfficiency))) },
       { axis: 'Cash Flow', val: Math.min(100, Math.max(0, Math.round(((profitNet.slice(-1)[0] || 0) / Math.max((profitRevenue.slice(-1)[0] || 1), 1)) * 100))) },
+      { axis: 'Cash Runway', val: Math.min(100, Math.max(0, Math.round(Math.min(cashRunwayMonths, 12) * 8))) },
       { axis: 'ROI', val: Math.min(100, Math.max(0, Math.round(profitMargin * 0.9))) }
     ];
 
@@ -1025,6 +1143,23 @@ app.get('/api/analytics/overview', protect, canViewReports, async (req, res) => 
         expenses: profitExpenses,
         profit: profitNet
       },
+      revenueSources,
+      expenseCategories,
+      arAging: invoiceBuckets,
+      financeSummary: {
+        cashPosition,
+        workingCapital,
+        cashRunwayMonths,
+        receivablesOutstanding,
+        currentPayables
+      },
+      forecast: {
+        labels: forecastLabels,
+        revenue: forecastRevenue,
+        expenses: forecastExpenses,
+        profit: forecastProfit
+      },
+      forecastSummary,
       topClients,
       quarterlyPerformance,
       scorecard,
