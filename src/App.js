@@ -9,6 +9,7 @@ import ProtectedRoute from './components/auth/ProtectedRoute';
 import RoleBasedRoute from './components/auth/RoleBasedRoute';
 import Sidebar from './components/layout/Sidebar';
 import Topbar from './components/layout/Topbar';
+import AIBot from './components/assistant/AIBot';
 
 // Import all pages
 import Dashboard from './pages/Dashboard';
@@ -42,6 +43,7 @@ const Layout = ({ children }) => {
         <main style={{ flex: 1, padding: '24px 28px' }}>
           {children}
         </main>
+        <AIBot />
       </div>
 
       {sidebarOpen && <div className="sidebar-backdrop" onClick={closeSidebar} />}

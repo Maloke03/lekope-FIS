@@ -1,10 +1,9 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useAuth, ROLES, PAGE_ACCESS } from '../../contexts/AuthContext';
+import { useAuth, ROLES } from '../../contexts/AuthContext';
+import { getAllowedNavGroups } from '../../config/navigation';
 import {
-  LayoutDashboard, TrendingUp, TrendingDown, FileText,
-  BarChart2, PieChart, Clock, Radio, Users, ShieldCheck,
-  Database, Megaphone, Calendar, LogOut, UserCircle,
+  Radio, LogOut,
 } from 'lucide-react';
 
 const Sidebar = ({ isOpen, closeSidebar }) => {
@@ -12,56 +11,7 @@ const Sidebar = ({ isOpen, closeSidebar }) => {
   const { pathname } = useLocation();
   const { user, hasRole, logout } = useAuth();
 
-  // Define navigation items with role requirements
-  const navGroups = [
-    {
-      label: 'Core Finance',
-      items: [
-        { label:'Dashboard',          path:'/dashboard',   icon:LayoutDashboard, roles: PAGE_ACCESS['/dashboard'] },
-        { label:'Revenue Management', path:'/revenue',     icon:TrendingUp,      roles: PAGE_ACCESS['/revenue'] },
-        { label:'Expense Tracking',   path:'/expenses',    icon:TrendingDown,    roles: PAGE_ACCESS['/expenses'] },
-        { label:'Invoicing & Billing',path:'/invoices',    icon:FileText,        roles: PAGE_ACCESS['/invoices'] },
-        { label:'Budget Management',  path:'/budget',      icon:BarChart2,       roles: PAGE_ACCESS['/budget'] },
-        { label:'Bank Reconciliation',path:'/bank-reconciliation', icon:ShieldCheck, roles: PAGE_ACCESS['/bank-reconciliation'] },
-      ],
-    },
-    {
-      label: 'Radio Station',
-      items: [
-        { label:'Ad Contracts & Airtime', path:'/adcontracts', icon:Megaphone, roles: PAGE_ACCESS['/adcontracts'] },
-        { label:'Advertisers',            path:'/advertisers', icon:Users,      roles: PAGE_ACCESS['/advertisers'] },
-        { label:'Bookings',               path:'/bookings',    icon:Calendar,   roles: PAGE_ACCESS['/bookings'] },
-        { label:'Rate Card',              path:'/rate-card',   icon:FileText,   roles: PAGE_ACCESS['/rate-card'] },
-        { label:'Payroll Management',     path:'/payroll',      icon:Users,      roles: PAGE_ACCESS['/payroll'] },
-        { label:'Tax & Compliance',       path:'/tax',          icon:ShieldCheck,roles: PAGE_ACCESS['/tax'] },
-        { label:'Asset Register',         path:'/assets',       icon:Database,   roles: PAGE_ACCESS['/assets'] },
-      ],
-    },
-    {
-      label: 'Reporting',
-      items: [
-        { label:'Financial Reports', path:'/reports',   icon:BarChart2, roles: PAGE_ACCESS['/reports'] },
-        { label:'Analytics',         path:'/analytics', icon:PieChart,  roles: PAGE_ACCESS['/analytics'] },
-        { label:'Audit Log',         path:'/audit-log', icon:Clock,    roles: PAGE_ACCESS['/audit-log'] },
-      ],
-    },
-    {
-      label: 'Administration',
-      items: [
-        { label:'User Management', path:'/users', icon:UserCircle, roles: PAGE_ACCESS['/users'] },
-      ],
-    },
-  ];
-
-  // Filter groups and items based on user role
-  const filteredNavGroups = navGroups
-    .map(group => ({
-      ...group,
-      items: group.items.filter(item => 
-        item.roles.some(role => hasRole(role))
-      )
-    }))
-    .filter(group => group.items.length > 0);
+  const filteredNavGroups = getAllowedNavGroups(hasRole);
 
   // Get role display name
   const getRoleDisplayName = (role) => {

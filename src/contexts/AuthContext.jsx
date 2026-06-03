@@ -179,7 +179,7 @@ export const AuthProvider = ({ children }) => {
   const canAccessPage = (path) => {
     if (!user) return false;
     const allowedRoles = PAGE_ACCESS[path] || [];
-    return user.role === ROLES.STATION_MANAGER || allowedRoles.includes(user.role);
+    return allowedRoles.some(role => hasRole(role));
   };
 
   // Get user role display name
