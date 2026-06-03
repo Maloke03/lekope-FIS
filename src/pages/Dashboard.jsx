@@ -38,6 +38,8 @@ const Dashboard = () => {
   const assetLiabilityRef = useRef(); const assetLiabilityChart = useRef();
   const userActivityRef = useRef(); const userActivityChart = useRef();
   const revenueCompositionRef = useRef(); const revenueCompositionChart = useRef();
+  const moduleHealthRef = useRef(); const moduleHealthChart = useRef();
+  const recentActivityRef = useRef(); const recentActivityChart = useRef();
   const bookingsRef = useRef(); const bookingsChart = useRef();
   const advertisersRef = useRef(); const advertisersChart = useRef();
   const payrollRef = useRef(); const payrollChart = useRef();
@@ -599,6 +601,57 @@ const Dashboard = () => {
         });
       }
 
+      // User Login Activity (Station Manager)
+      userActivityChart.current?.destroy();
+      if (userActivityRef.current && isStationManager) {
+        const loginEvents = Array.isArray(loginHistory) ? loginHistory.map(entry => ({
+          date: entry.createdAt ? new Date(entry.createdAt).toISOString().slice(0, 10) : 'Unknown',
+          status: entry.status || 'UNKNOWN'
+        })) : [];
+
+        const dates = [...new Set(loginEvents.map(event => event.date))].sort();
+        const statuses = [...new Set(loginEvents.map(event => event.status))];
+
+        const statusSeries = statuses.map(status => ({
+          status,
+          data: dates.map(date => loginEvents.filter(event => event.date === date && event.status === status).length)
+        }));
+
+        const activeDates = dates.length ? dates : ['No activity'];
+        const datasets = statusSeries.length ? statusSeries.map((series, index) => ({
+          label: series.status,
+          data: series.data,
+          backgroundColor: ['#22c55e', '#ef4444', '#f97316', '#3b82f6', '#a855f7'][index % 5],
+          borderColor: '#141f35',
+          borderWidth: 1,
+          borderRadius: 4
+        })) : [{ label: 'No activity', data: [0], backgroundColor: '#4a6080', borderColor: '#141f35', borderWidth: 1 }];
+
+        userActivityChart.current = new Chart(userActivityRef.current, {
+          type: 'bar',
+          data: {
+            labels: activeDates,
+            datasets
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { labels: { color: '#8ba0bc', font: { family: 'DM Sans' }, boxWidth: 12, padding: 14 } },
+              tooltip: {
+                callbacks: {
+                  label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y || 0}`
+                }
+              }
+            },
+            scales: {
+              x: { stacked: true, grid: { color: '#1e2e48' }, ticks: { color: '#8ba0bc' } },
+              y: { stacked: true, grid: { color: '#1e2e48' }, ticks: { color: '#8ba0bc', precision: 0 }, min: 0 }
+            }
+          }
+        });
+      }
+
       // Payroll Status
       payrollChart.current?.destroy();
       if (payrollRef.current) {
@@ -661,6 +714,163 @@ const Dashboard = () => {
             scales: {
               x: { grid: { color: '#1e2e48' }, ticks: { color: '#8ba0bc' } },
               y: { grid: { color: '#1e2e48' }, ticks: { color: '#8ba0bc' }, min: 0 }
+            }
+          }
+        });
+      }
+
+      // Module Data Health
+      moduleHealthChart.current?.destroy();
+      const moduleHealthRowsData = [
+        {
+          module: 'Invoices',
+          metric: `${paidInvoiceCount}/${invoiceCount} paid`,
+          value: lsl(summary.outstanding),
+          status: summary.outstanding > 0 ? 'Monitor' : 'On Track'
+        },
+        {
+          module: 'Secure Ledger',
+          metric: `${securedInvoiceCount}/${invoiceCount} secured`,
+          value: `${invoiceCount ? Math.round((securedInvoiceCount / invoiceCount) * 100) : 100}%`,
+          status: securedInvoiceCount === invoiceCount ? 'On Track' : 'Watch'
+        },
+        {
+          module: 'Budget',
+          metric: `${budgetTotals.utilization || 0}% used`,
+          value: lsl(budgetTotals.remaining || 0),
+          status: (budgetTotals.utilization || 0) >= 100 ? 'Over budget' : (budgetTotals.utilization || 0) >= 90 ? 'Watch' : 'On Track'
+        },
+        {
+          module: 'Bank Reconciliation',
+          metric: `${bankReconciliationRate}% matched`,
+          value: lsl(bankUnmatchedValue),
+          status: bankReconciliationRate >= 95 ? 'On Track' : 'Watch'
+        },
+        {
+          module: 'Tax & Compliance',
+          metric: `${complianceScore}% compliant`,
+          value: lsl(taxDue + taxOverdue),
+          status: taxOverdue > 0 || complianceScore < 80 ? 'Over budget' : complianceScore < 95 ? 'Watch' : 'On Track'
+        },
+        {
+          module: 'Assets',
+          metric: `${assets.length} assets`,
+          value: lsl(assetValue),
+          status: 'On Track'
+        },
+        {
+          module: 'Rate Card',
+          metric: `${activeRates} active rates`,
+          value: `${rateCards.length} total`,
+          status: activeRates > 0 ? 'On Track' : 'Watch'
+        }
+      ];
+      const moduleHealthScoreMap = { 'On Track': 4, Watch: 3, Monitor: 2, 'Over budget': 1 };
+      if (moduleHealthRef.current) {
+        moduleHealthChart.current = new Chart(moduleHealthRef.current, {
+          type: 'bar',
+          data: {
+            labels: moduleHealthRowsData.map(r => r.module),
+            datasets: [{
+              label: 'Module Health',
+              data: moduleHealthRowsData.map(r => moduleHealthScoreMap[r.status] || 0),
+              backgroundColor: moduleHealthRowsData.map(r => r.status === 'On Track' ? '#22c55e' : r.status === 'Watch' ? '#f97316' : r.status === 'Monitor' ? '#f59e0b' : '#ef4444'),
+              borderRadius: 8,
+              borderWidth: 1,
+              borderColor: '#141f35'
+            }]
+          },
+          options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: ctx => {
+                    const row = moduleHealthRowsData[ctx.dataIndex] || {};
+                    return `${row.module}: ${row.status} — ${row.metric} (${row.value})`;
+                  }
+                }
+              }
+            },
+            scales: {
+              x: {
+                min: 0,
+                max: 4,
+                ticks: {
+                  color: '#8ba0bc',
+                  callback: v => {
+                    if (v === 0) return 'Low';
+                    if (v === 1) return 'Poor';
+                    if (v === 2) return 'Monitor';
+                    if (v === 3) return 'Watch';
+                    if (v === 4) return 'On Track';
+                    return '';
+                  }
+                },
+                grid: { color: '#1e2e48' }
+              },
+              y: { ticks: { color: '#8ba0bc' }, grid: { display: false } }
+            }
+          }
+        });
+      }
+
+      // Recent Cross-Module Activity
+      recentActivityChart.current?.destroy();
+      const recentOperationalRowsData = [
+        ...invoices.slice(0, 3).map(item => ({ type: 'Invoice', label: item.client, amount: item.amount, status: item.status, date: item.issue || item.createdAt })),
+        ...bookings.slice(0, 3).map(item => ({ type: 'Booking', label: item.client || item.campaign, amount: item.amount || item.spots || 0, status: item.status, date: item.due || item.createdAt })),
+        ...taxItems.slice(0, 3).map(item => ({ type: 'Tax', label: item.type, amount: item.amount, status: item.status, date: item.dueDate || item.createdAt })),
+        ...bankEntries.slice(0, 3).map(item => ({ type: 'Bank', label: item.description, amount: item.amount, status: item.status, date: item.date || item.createdAt }))
+      ]
+        .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
+        .slice(0, 8);
+      const activityCounts = recentOperationalRowsData.reduce((acc, row) => {
+        acc[row.type] = (acc[row.type] || 0) + 1;
+        return acc;
+      }, {});
+      const activityTotals = recentOperationalRowsData.reduce((acc, row) => {
+        acc[row.type] = (acc[row.type] || 0) + Number(row.amount || 0);
+        return acc;
+      }, {});
+      const activityLabels = Object.keys(activityCounts).length ? Object.keys(activityCounts) : ['No activity'];
+      const activityValues = activityLabels.map(label => activityCounts[label] || 0);
+      const activityAmounts = activityLabels.map(label => activityTotals[label] || 0);
+      if (recentActivityRef.current) {
+        recentActivityChart.current = new Chart(recentActivityRef.current, {
+          type: 'bar',
+          data: {
+            labels: activityLabels,
+            datasets: [{
+              label: 'Recent Events',
+              data: activityValues,
+              backgroundColor: ['#3b82f6', '#22c55e', '#f97316', '#a855f7'],
+              borderRadius: 6,
+              borderWidth: 1,
+              borderColor: '#141f35'
+            }]
+          },
+          options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: ctx => {
+                    const amount = activityAmounts[ctx.dataIndex] || 0;
+                    return `${ctx.label}: ${ctx.parsed.x || 0} event(s) • ${lsl(amount)}`;
+                  }
+                }
+              }
+            },
+            scales: {
+              x: { grid: { color: '#1e2e48' }, ticks: { color: '#8ba0bc', precision: 0 } },
+              y: { ticks: { color: '#8ba0bc' }, grid: { display: false } }
             }
           }
         });
@@ -898,6 +1108,8 @@ const Dashboard = () => {
       assetLiabilityChart.current?.destroy();
       userActivityChart.current?.destroy();
       revenueCompositionChart.current?.destroy();
+      moduleHealthChart.current?.destroy();
+      recentActivityChart.current?.destroy();
       bookingsChart.current?.destroy();
       advertisersChart.current?.destroy();
       payrollChart.current?.destroy();
@@ -1103,54 +1315,13 @@ const Dashboard = () => {
       </div>
 
       <div className="g2" style={{ marginBottom: 20 }}>
-        <div className="card">
+        <div className="dashboard-chart-panel">
           <div className="sec-head"><span className="sec-title">Module Data Health</span></div>
-          <table className="tbl">
-            <thead>
-              <tr>
-                <th>Module</th>
-                <th>Metric</th>
-                <th>Value</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {moduleHealthRows.map(row => (
-                <tr key={row.module}>
-                  <td><b>{row.module}</b></td>
-                  <td>{row.metric}</td>
-                  <td>{row.value}</td>
-                  <td><span className="badge" style={statusStyle(row.status)}>{row.status}</span></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div style={{ height: 320 }} className="chart-card-glow"><canvas ref={moduleHealthRef} /></div>
         </div>
-
-        <div className="card">
+        <div className="dashboard-chart-panel">
           <div className="sec-head"><span className="sec-title">Recent Cross-Module Activity</span></div>
-          <table className="tbl">
-            <thead>
-              <tr>
-                <th>Type</th>
-                <th>Record</th>
-                <th>Amount</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentOperationalRows.length === 0 ? (
-                <tr><td colSpan="4" style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No recent operational records yet.</td></tr>
-              ) : recentOperationalRows.map((row, index) => (
-                <tr key={`${row.type}-${row.label}-${index}`}>
-                  <td>{row.type}</td>
-                  <td><b>{row.label || '-'}</b></td>
-                  <td>{typeof row.amount === 'number' ? lsl(row.amount) : row.amount || '-'}</td>
-                  <td><span className="badge" style={statusStyle(row.status)}>{row.status || '-'}</span></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div style={{ height: 320 }} className="chart-card-glow"><canvas ref={recentActivityRef} /></div>
         </div>
       </div>
 
