@@ -48,6 +48,7 @@ const Dashboard = () => {
   const monthlyExpenseRef = useRef(); const monthlyExpenseChart = useRef();
   const budgetActualRef = useRef(); const budgetActualChart = useRef();
   const quarterlyForecastRef = useRef(); const quarterlyForecastChart = useRef();
+  const projectionRef = useRef(); const projectionChart = useRef();
 
   const isStationManager = user?.role === ROLES.STATION_MANAGER;
   const isFinanceOfficer = user?.role === ROLES.FINANCE_OFFICER;
@@ -1026,6 +1027,51 @@ const Dashboard = () => {
         });
       }
 
+      // Projection Chart for Next Quarter
+      projectionChart.current?.destroy();
+      if (projectionRef.current && analyticsOverview?.forecast) {
+        projectionChart.current = new Chart(projectionRef.current, {
+          type: 'line',
+          data: {
+            labels: analyticsOverview.forecast.labels || [],
+            datasets: [
+              {
+                label: 'Projected Revenue',
+                data: analyticsOverview.forecast.revenue || [],
+                borderColor: '#f5c518',
+                backgroundColor: 'rgba(245,197,24,0.15)',
+                tension: 0.35,
+                fill: false,
+                pointRadius: 3,
+                borderWidth: 2
+              },
+              {
+                label: 'Projected Expenses',
+                data: analyticsOverview.forecast.expenses || [],
+                borderColor: '#ef4444',
+                backgroundColor: 'rgba(239,68,68,0.15)',
+                tension: 0.35,
+                fill: false,
+                pointRadius: 3,
+                borderWidth: 2
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { labels: { color: '#8ba0bc', font: { family: 'DM Sans' }, boxWidth: 10, padding: 10 } },
+              tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${lsl(ctx.parsed.y || 0)}` } }
+            },
+            scales: {
+              x: { grid: { color: '#1e2e48' }, ticks: { color: '#8ba0bc' } },
+              y: { grid: { color: '#1e2e48' }, ticks: { color: '#8ba0bc', callback: v => `${(v / 1000).toFixed(0)}k` }, min: 0 }
+            }
+          }
+        });
+      }
+
       // Invoice Status Chart (Station Manager)
       invoiceStatusChart.current?.destroy();
       if (invoiceStatusRef.current && isStationManager && invoices && invoices.length > 0) {
@@ -1150,6 +1196,7 @@ const Dashboard = () => {
       monthlyExpenseChart.current?.destroy();
       budgetActualChart.current?.destroy();
       quarterlyForecastChart.current?.destroy();
+      projectionChart.current?.destroy();
     };
   }, []);
 
@@ -1399,6 +1446,7 @@ const Dashboard = () => {
                 </div>
               </div>
               <div style={{ color: 'var(--text-secondary)', fontSize: '0.86rem' }}>This projection is based on the latest momentum from revenue and expense trends, and helps highlight spend vs cash coverage.</div>
+              <div style={{ height: 180, marginTop: 18 }}><canvas ref={projectionRef} /></div>
             </div>
           </div>
         </>
