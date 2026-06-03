@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { TrendingUp, DollarSign, TrendingDown, FileText, Download, Calendar, RefreshCw } from 'lucide-react';
+import { TrendingUp, DollarSign, TrendingDown, FileText, Download, Calendar, RefreshCw, BookOpen, ListChecks, Scale } from 'lucide-react';
 import { Chart, registerables } from 'chart.js';
 import { jsPDF } from 'jspdf';
 import { reportService } from '../services/reportService';
@@ -10,6 +10,9 @@ Chart.register(...registerables);
 const reportTiles = [
   { title:'Income Statement (P&L)', sub:'Profit and Loss statement for current period', icon:TrendingUp, color:'var(--green)' },
   { title:'Balance Sheet', sub:'Financial position and net worth', icon:DollarSign, color:'var(--gold)' },
+  { title:'Trial Balance', sub:'Debit and credit control totals', icon:Scale, color:'var(--blue)' },
+  { title:'General Ledger', sub:'Account-by-account double-entry activity', icon:BookOpen, color:'var(--purple)' },
+  { title:'Journal Entries', sub:'Transaction register with debit and credit sides', icon:ListChecks, color:'var(--orange)' },
   { title:'Cash Flow Statement', sub:'Operating, investing, and financing activities', icon:TrendingDown, color:'var(--blue)' },
   { title:'Budget Variance Report', sub:'Actual vs budgeted performance', icon:FileText, color:'var(--purple)' },
 ];
@@ -74,6 +77,23 @@ const FinReports = () => {
     rows.push(['Total Assets', reportData.balanceSheet.totalAssets]);
     rows.push(['Total Liabilities', reportData.balanceSheet.totalLiabilities]);
     rows.push(['Owner\'s Equity', reportData.balanceSheet.ownersEquity]);
+    rows.push([]);
+    rows.push(['Trial Balance']);
+    rows.push(['Account', 'Debit', 'Credit']);
+    (reportData.trialBalance?.accounts || []).forEach((row) => rows.push([row.account, row.debit, row.credit]));
+    rows.push(['Totals', reportData.trialBalance?.totals?.debit || 0, reportData.trialBalance?.totals?.credit || 0]);
+    rows.push([]);
+    rows.push(['Journal Entries']);
+    rows.push(['Date', 'Source', 'Description', 'Debit Account', 'Credit Account', 'Amount', 'Status']);
+    (reportData.journalEntries || []).forEach((entry) => rows.push([
+      entry.date,
+      entry.source,
+      entry.description,
+      entry.debit?.account || '',
+      entry.credit?.account || '',
+      entry.amount,
+      entry.status
+    ]));
 
     const csv = rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\r\n');
     downloadFile(csv, `financial-reports-${new Date().toISOString().slice(0,10)}.csv`, 'text/csv;charset=utf-8;');
@@ -138,6 +158,19 @@ const FinReports = () => {
     doc.text('Owner\'s Equity', marginLeft, y);
     doc.text(`${lsl(reportData.balanceSheet.ownersEquity)}`, 180, y, { align: 'right' });
     y += 10;
+
+    const doubleEntry = reportData.doubleEntryStatus || {};
+    doc.setFontSize(12);
+    doc.text('Double-Entry Control', marginLeft, y);
+    y += 8;
+    doc.setFontSize(10);
+    doc.text(`Total Debits: ${lsl(doubleEntry.debitTotal || 0)}`, marginLeft, y);
+    y += 6;
+    doc.text(`Total Credits: ${lsl(doubleEntry.creditTotal || 0)}`, marginLeft, y);
+    y += 6;
+    doc.text(`Difference: ${lsl(doubleEntry.difference || 0)}`, marginLeft, y);
+    y += 6;
+    doc.text(`Status: ${doubleEntry.balanced ? 'Balanced' : 'Review required'}`, marginLeft, y);
     doc.save(`financial-report-${new Date().toISOString().slice(0,10)}.pdf`);
   };
 
@@ -285,6 +318,17 @@ const FinReports = () => {
     return <div style={{ padding: 40, textAlign: 'center' }}>No report data available.</div>;
   }
 
+  const trialBalance = reportData.trialBalance || { accounts: [], totals: { debit: 0, credit: 0, difference: 0 }, balanced: false };
+  const generalLedger = reportData.generalLedger || [];
+  const journalEntries = reportData.journalEntries || [];
+  const doubleEntryStatus = reportData.doubleEntryStatus || {
+    balanced: trialBalance.balanced,
+    debitTotal: trialBalance.totals.debit,
+    creditTotal: trialBalance.totals.credit,
+    difference: trialBalance.totals.difference,
+    journalEntryCount: journalEntries.length
+  };
+
   return (
     <div className="page">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 22 }}>
@@ -411,6 +455,113 @@ const FinReports = () => {
               <span>Owner's Equity</span><span>{lsl(reportData.balanceSheet.ownersEquity)}</span>
             </div>
           </div>
+        </div>
+      </div>
+
+      <div className="g2" style={{ marginBottom: 16 }}>
+        <div className="card">
+          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.05rem', color: 'var(--gold)', marginBottom: 14 }}>Double-Entry Control</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 12 }}>
+            {[
+              ['Debit Total', lsl(doubleEntryStatus.debitTotal || 0), 'var(--blue)'],
+              ['Credit Total', lsl(doubleEntryStatus.creditTotal || 0), 'var(--green)'],
+              ['Difference', lsl(doubleEntryStatus.difference || 0), Math.abs(doubleEntryStatus.difference || 0) < 1 ? 'var(--green)' : 'var(--red)'],
+              ['Journal Entries', doubleEntryStatus.journalEntryCount || 0, 'var(--gold)']
+            ].map(([label, value, color]) => (
+              <div key={label} style={{ padding: '12px 14px', borderRadius: 8, background: 'var(--bg-hover)' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 5 }}>{label}</div>
+                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, color, fontSize: '1.05rem' }}>{value}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{ marginTop: 14, padding: '10px 12px', borderRadius: 8, background: doubleEntryStatus.balanced ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)', border: `1px solid ${doubleEntryStatus.balanced ? '#22c55e33' : '#ef444433'}`, color: doubleEntryStatus.balanced ? 'var(--green)' : 'var(--red)', fontWeight: 700 }}>
+            {doubleEntryStatus.balanced ? 'Balanced trial balance' : 'Review required: debits and credits do not agree'}
+          </div>
+        </div>
+
+        <div className="card">
+          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.05rem', color: 'var(--gold)', marginBottom: 14 }}>Trial Balance - {trialBalance.period || reportData.period?.label || 'Current Period'}</div>
+          <table className="tbl">
+            <thead>
+              <tr>
+                <th>Account</th>
+                <th style={{ textAlign: 'right' }}>Debit</th>
+                <th style={{ textAlign: 'right' }}>Credit</th>
+              </tr>
+            </thead>
+            <tbody>
+              {trialBalance.accounts.slice(0, 12).map((account) => (
+                <tr key={account.account}>
+                  <td>{account.account}</td>
+                  <td style={{ textAlign: 'right', fontFamily: 'var(--font-display)' }}>{account.debit ? lsl(account.debit) : '-'}</td>
+                  <td style={{ textAlign: 'right', fontFamily: 'var(--font-display)' }}>{account.credit ? lsl(account.credit) : '-'}</td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td style={{ fontWeight: 800 }}>Totals</td>
+                <td style={{ textAlign: 'right', fontFamily: 'var(--font-display)', fontWeight: 800 }}>{lsl(trialBalance.totals.debit || 0)}</td>
+                <td style={{ textAlign: 'right', fontFamily: 'var(--font-display)', fontWeight: 800 }}>{lsl(trialBalance.totals.credit || 0)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      <div className="g2" style={{ marginBottom: 16 }}>
+        <div className="card">
+          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.05rem', color: 'var(--gold)', marginBottom: 14 }}>General Ledger Snapshot</div>
+          <table className="tbl">
+            <thead>
+              <tr>
+                <th>Account</th>
+                <th>Normal</th>
+                <th style={{ textAlign: 'right' }}>Debit</th>
+                <th style={{ textAlign: 'right' }}>Credit</th>
+                <th style={{ textAlign: 'right' }}>Balance</th>
+              </tr>
+            </thead>
+            <tbody>
+              {generalLedger.slice(0, 8).map((ledger) => (
+                <tr key={ledger.account}>
+                  <td>{ledger.account}</td>
+                  <td>{ledger.normalBalance}</td>
+                  <td style={{ textAlign: 'right', fontFamily: 'var(--font-display)' }}>{ledger.debitTotal ? lsl(ledger.debitTotal) : '-'}</td>
+                  <td style={{ textAlign: 'right', fontFamily: 'var(--font-display)' }}>{ledger.creditTotal ? lsl(ledger.creditTotal) : '-'}</td>
+                  <td style={{ textAlign: 'right', fontFamily: 'var(--font-display)', fontWeight: 700 }}>{lsl(ledger.balance || 0)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {!generalLedger.length && <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No ledger activity for this period.</div>}
+        </div>
+
+        <div className="card">
+          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.05rem', color: 'var(--gold)', marginBottom: 14 }}>Journal Entry Register</div>
+          <table className="tbl">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Source</th>
+                <th>Debit</th>
+                <th>Credit</th>
+                <th style={{ textAlign: 'right' }}>Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {journalEntries.slice(0, 8).map((entry) => (
+                <tr key={entry.id}>
+                  <td>{entry.date}</td>
+                  <td>{entry.source}</td>
+                  <td>{entry.debit?.account}</td>
+                  <td>{entry.credit?.account}</td>
+                  <td style={{ textAlign: 'right', fontFamily: 'var(--font-display)', fontWeight: 700 }}>{lsl(entry.amount)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {!journalEntries.length && <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No journal entries for this period.</div>}
         </div>
       </div>
 

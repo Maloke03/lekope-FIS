@@ -100,7 +100,7 @@ export const PAGE_KNOWLEDGE = {
   },
   '/payroll': {
     summary:
-      'Payroll Management tracks employee pay, payroll status, salary totals, payment references, and payroll approvals.',
+      'Payroll Management tracks employee pay, payroll status, salary totals, payment references, payroll approvals, and downloadable digital payslips.',
     answers: [
       'Use it for staff payment questions, payroll runs, paid versus pending payroll, and salary summaries.',
       'Approval and payment actions are role-protected.',
@@ -108,7 +108,7 @@ export const PAGE_KNOWLEDGE = {
   },
   '/tax': {
     summary:
-      'Tax & Compliance monitors tax obligations, due amounts, overdue items, regulations, and compliance status.',
+      'Tax & Compliance monitors tax obligations, due amounts, overdue items, regulations, compliance status, and LRA-ready export reports.',
     answers: [
       'Use it to see what tax is due, what has been paid, what is overdue, and what compliance items need attention.',
       'It supports finance and audit checks around tax and regulations.',
@@ -124,7 +124,7 @@ export const PAGE_KNOWLEDGE = {
   },
   '/reports': {
     summary:
-      'Financial Reports generates structured finance outputs such as income statements, financial summaries, and reporting views.',
+      'Financial Reports generates structured finance outputs such as income statements, balance sheets, cash flow statements, trial balances, general ledger snapshots, and journal entries.',
     answers: [
       'Use it when you need formal reporting rather than live dashboard snapshots.',
       'It is the best page for month-end or management finance reports.',
@@ -132,7 +132,7 @@ export const PAGE_KNOWLEDGE = {
   },
   '/analytics': {
     summary:
-      'Analytics gives deeper charts, trends, projections, and performance insight across financial and operational data.',
+      'Analytics gives deeper charts, trends, projections, anomaly detection, and performance insight across financial and operational data.',
     answers: [
       'Use it to explore trends, compare performance, review forecasts, and understand cash flow or performance projections.',
       'It is the best page for insight questions that go beyond a single record or transaction.',

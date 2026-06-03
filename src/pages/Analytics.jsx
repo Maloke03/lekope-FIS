@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { TrendingUp, TrendingDown, Zap, RefreshCw, DollarSign, BarChart3, Users, AlertCircle } from 'lucide-react';
+import { TrendingUp, TrendingDown, Zap, RefreshCw, DollarSign, BarChart3, Users, AlertCircle, ShieldCheck } from 'lucide-react';
 import { Chart, registerables } from 'chart.js';
 import { analyticsService } from '../services/analyticsService';
 import { lsl } from '../utils/helpers';
@@ -56,6 +56,14 @@ const Analytics = () => {
     topClients: [],
     scorecard: [],
     quarterlyPerformance: { labels: [], revenue: [], profit: [], margins: [] },
+    anomalyDetection: {
+      model: 'Advisory transaction pattern monitor',
+      status: 'No unusual patterns detected',
+      confidenceScore: 0,
+      reviewRequired: 0,
+      flaggedTransactions: [],
+      controls: []
+    },
     insights: []
   };
 
@@ -105,6 +113,7 @@ const Analytics = () => {
       taxReserve: { ...financialProjectionDefaults.taxReserve, ...(incomingProjections.taxReserve || {}) }
     },
     quarterlyPerformance: { ...emptyAnalytics.quarterlyPerformance, ...(data?.quarterlyPerformance || {}) },
+    anomalyDetection: { ...emptyAnalytics.anomalyDetection, ...(data?.anomalyDetection || {}) },
     topClients: data?.topClients || [],
     scorecard: data?.scorecard || [],
     insights: data?.insights || []
@@ -493,6 +502,7 @@ const Analytics = () => {
   const budgetBurn = projections.budgetBurn;
   const receivablesProjection = projections.receivables;
   const taxReserve = projections.taxReserve;
+  const anomalyDetection = safeData.anomalyDetection;
   const finalClosingCash = cashFlowProjection.closingCash.length
     ? cashFlowProjection.closingCash[cashFlowProjection.closingCash.length - 1]
     : 0;
@@ -819,6 +829,73 @@ const Analytics = () => {
               <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: 4 }}>{q}</div>
               <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.1rem', color: 'var(--gold)' }}>{safeData.quarterlyPerformance.margins[i]}%</div>
               <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: 2 }}>Margin</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="card" style={{ marginBottom: 20 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--gold)' }}>
+              <ShieldCheck size={17} /> AI Anomaly Detection
+            </div>
+            <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>{anomalyDetection.model}</div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: 10, flex: '1 1 320px', maxWidth: 460 }}>
+            {[
+              ['Status', anomalyDetection.status, anomalyDetection.reviewRequired > 0 ? 'var(--orange)' : 'var(--green)'],
+              ['Review Items', anomalyDetection.reviewRequired, anomalyDetection.reviewRequired > 0 ? 'var(--orange)' : 'var(--green)'],
+              ['Confidence', `${anomalyDetection.confidenceScore}%`, 'var(--blue)']
+            ].map(([label, value, color]) => (
+              <div key={label} style={{ padding: '10px 12px', borderRadius: 8, background: 'var(--bg-hover)' }}>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: 4 }}>{label}</div>
+                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, color, fontSize: '0.95rem' }}>{value}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <table className="tbl">
+          <thead>
+            <tr>
+              <th>Transaction</th>
+              <th>Type</th>
+              <th>Reason</th>
+              <th>Severity</th>
+              <th style={{ textAlign: 'right' }}>Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {anomalyDetection.flaggedTransactions.map((flag) => (
+              <tr key={flag.id}>
+                <td>
+                  <b>{flag.id}</b>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 2 }}>{flag.date}</div>
+                </td>
+                <td>{flag.type}</td>
+                <td style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>{flag.reason}</td>
+                <td>
+                  <span style={{ padding: '2px 8px', borderRadius: 4, fontSize: '0.7rem', fontWeight: 700, background: flag.severity === 'High' ? '#ef444420' : '#f9731620', color: flag.severity === 'High' ? 'var(--red)' : 'var(--orange)' }}>
+                    {flag.severity}
+                  </span>
+                </td>
+                <td style={{ textAlign: 'right', fontFamily: 'var(--font-display)', fontWeight: 700 }}>{lsl(flag.amount)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        {!anomalyDetection.flaggedTransactions.length && (
+          <div style={{ padding: '14px 16px', borderRadius: 8, background: 'rgba(34,197,94,0.08)', border: '1px solid #22c55e33', color: 'var(--green)', fontWeight: 700 }}>
+            No transactions are currently outside the expected pattern.
+          </div>
+        )}
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 10, marginTop: 14 }}>
+          {anomalyDetection.controls.map((control) => (
+            <div key={control} style={{ padding: '10px 12px', borderRadius: 8, background: 'var(--bg-hover)', color: 'var(--text-secondary)', fontSize: '0.78rem', lineHeight: 1.5 }}>
+              {control}
             </div>
           ))}
         </div>

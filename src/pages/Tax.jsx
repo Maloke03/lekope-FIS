@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, AlertTriangle, CheckCircle, Clock, Plus, Edit, Trash2, Eye, Search, Filter } from 'lucide-react';
+import { ShieldCheck, AlertTriangle, CheckCircle, Clock, Plus, Edit, Trash2, Eye, Search, Download } from 'lucide-react';
 import { KPI, Badge, Modal, Field, Inp, Sel } from '../components/common/UI';
 import { taxService } from '../services/taxService';
 import { formatCurrency } from '../utils/invoiceUtils';
@@ -159,6 +159,59 @@ const Tax = () => {
     }
   };
 
+  const downloadFile = (content, fileName, mimeType) => {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const exportLraReport = () => {
+    const rows = [
+      ['Lekope FM LRA Tax Compliance Report'],
+      ['Generated', new Date().toLocaleDateString()],
+      [],
+      ['Summary'],
+      ['Total Due', summary.totalDue],
+      ['Total Paid', summary.totalPaid],
+      ['Total Overdue', summary.totalOverdue],
+      ['Upcoming Total', summary.upcomingTotal],
+      ['Compliance Score', `${summary.complianceScore}%`],
+      [],
+      ['Obligations'],
+      ['Tax Type', 'Period', 'Amount', 'Due Date', 'Status', 'Payment Reference', 'Notes']
+    ];
+
+    items.forEach((item) => rows.push([
+      item.type,
+      item.period,
+      item.amount,
+      item.dueDate,
+      new Date(item.dueDate) < new Date() && item.status === 'Pending' ? 'Overdue' : item.status,
+      item.paymentReference || '',
+      item.notes || ''
+    ]));
+
+    rows.push([]);
+    rows.push(['Regulatory Register']);
+    rows.push(['Regulation', 'Category', 'Status', 'Description']);
+    regulations.forEach((regulation) => rows.push([
+      regulation.name,
+      regulation.category,
+      regulation.status,
+      regulation.description
+    ]));
+
+    const csv = rows.map((row) => row.map((cell) => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(',')).join('\r\n');
+    downloadFile(csv, `lra-tax-report-${new Date().toISOString().slice(0, 10)}.csv`, 'text/csv;charset=utf-8;');
+  };
+
   const getStatusColor = (status) => {
     const colors = {
       'Paid': '#22c55e',
@@ -200,9 +253,14 @@ const Tax = () => {
           <h1 className="page-h">Tax &amp; Compliance</h1>
           <p className="page-sub">Statutory obligations, regulatory compliance &amp; filing tracker</p>
         </div>
-        <button className="btn btn-gold" onClick={() => { setEditMode(false); setForm(blank); setAddOpen(true); }}>
-          <Plus size={15} /> Add Obligation
-        </button>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <button className="btn btn-ghost btn-sm" onClick={exportLraReport}>
+            <Download size={14} /> LRA Report
+          </button>
+          <button className="btn btn-gold" onClick={() => { setEditMode(false); setForm(blank); setAddOpen(true); }}>
+            <Plus size={15} /> Add Obligation
+          </button>
+        </div>
       </div>
 
       {/* Alert for upcoming obligations */}

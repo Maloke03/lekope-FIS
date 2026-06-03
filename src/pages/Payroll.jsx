@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Users, DollarSign, CreditCard, AlertCircle, Plus, CheckCircle, Edit, Trash2, Calendar, Search, X } from 'lucide-react';
+import { Users, DollarSign, CreditCard, AlertCircle, Plus, CheckCircle, Edit, Trash2, Calendar, Search, FileText } from 'lucide-react';
 import { KPI, Badge, Modal, Field, Inp, Sel, Prog } from '../components/common/UI';
 import { payrollService } from '../services/payrollService';
 import { formatCurrency } from '../utils/invoiceUtils';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useAuth, ROLES } from '../contexts/AuthContext';
+import { jsPDF } from 'jspdf';
 
 const DEPT_COLORS = { 
   Broadcasting: '#f5c518', 
@@ -94,6 +95,48 @@ const Payroll = () => {
     const nssf = Math.round(g * 0.03);
     const net = g - tax - nssf;
     return { tax, nssf, net };
+  };
+
+  const getPayslipPeriod = (payroll) => `${payroll.month || selectedMonth || currentMonthName} ${payroll.year || selectedYear || currentYearNum}`;
+
+  const downloadPayslip = (payroll) => {
+    const doc = new jsPDF({ orientation: 'portrait' });
+    const period = getPayslipPeriod(payroll);
+    const fileName = `payslip-${payroll.id || payroll.name}-${period}`.replace(/[^a-z0-9-]+/gi, '-').toLowerCase();
+
+    doc.setFontSize(18);
+    doc.text('Lekope FM Payslip', 16, 18);
+    doc.setFontSize(10);
+    doc.text(`Period: ${period}`, 16, 27);
+    doc.text(`Payslip ID: ${payroll.id || 'N/A'}`, 16, 34);
+
+    doc.setFontSize(12);
+    doc.text('Employee Details', 16, 48);
+    doc.setFontSize(10);
+    doc.text(`Name: ${payroll.name}`, 16, 58);
+    doc.text(`Role: ${payroll.role || 'N/A'}`, 16, 65);
+    doc.text(`Department: ${payroll.department || 'N/A'}`, 16, 72);
+    doc.text(`Bank Account: ${payroll.bankAccount || 'N/A'}`, 16, 79);
+
+    doc.setFontSize(12);
+    doc.text('Pay Calculation', 16, 96);
+    doc.setFontSize(10);
+    [
+      ['Gross salary', payroll.gross],
+      ['PAYE deduction', payroll.tax],
+      ['NSSF contribution', payroll.nssf],
+      ['Net pay', payroll.net]
+    ].forEach(([label, value], index) => {
+      const y = 108 + index * 8;
+      doc.text(label, 16, y);
+      doc.text(formatCurrency(value || 0), 180, y, { align: 'right' });
+    });
+
+    doc.setFontSize(10);
+    doc.text(`Status: ${payroll.status || 'Pending'}`, 16, 148);
+    doc.text(`Payment reference: ${payroll.paymentReference || 'Pending'}`, 16, 156);
+    doc.text('This digital payslip is generated from the Lekope FM Financial Information System.', 16, 174);
+    doc.save(`${fileName}.pdf`);
   };
 
   const saveEmployee = async () => {
@@ -227,6 +270,13 @@ const Payroll = () => {
     emp.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
     emp.department.toLowerCase().includes(searchTerm.toLowerCase())
   );
+  const normalizeName = (value = '') => value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  const userNameTokens = normalizeName(user?.name).split(' ').filter(token => token.length > 2);
+  const personalPayslips = staff.filter((payroll) => {
+    const employeeName = normalizeName(payroll.name);
+    return userNameTokens.length > 0 && userNameTokens.some((token) => employeeName.includes(token));
+  });
+  const currentPayslip = personalPayslips[0];
 
   if (loading) {
     return <div style={{ padding: 40, textAlign: 'center' }}>Loading payroll data...</div>;
@@ -244,30 +294,28 @@ const Payroll = () => {
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 20, marginBottom: 30 }}>
-          <KPI title="Current Month Gross" value={formatCurrency(6000)} icon={DollarSign} color="#f5c518" />
-          <KPI title="Tax Deducted" value={formatCurrency(900)} icon={CreditCard} color="#ef4444" />
-          <KPI title="NSSF Contribution" value={formatCurrency(300)} icon={Users} color="#f97316" />
-          <KPI title="Net Pay" value={formatCurrency(4800)} icon={CheckCircle} color="#22c55e" />
+          <KPI title="Current Month Gross" value={formatCurrency(currentPayslip?.gross || 0)} icon={DollarSign} color="#f5c518" />
+          <KPI title="Tax Deducted" value={formatCurrency(currentPayslip?.tax || 0)} icon={CreditCard} color="#ef4444" />
+          <KPI title="NSSF Contribution" value={formatCurrency(currentPayslip?.nssf || 0)} icon={Users} color="#f97316" />
+          <KPI title="Net Pay" value={formatCurrency(currentPayslip?.net || 0)} icon={CheckCircle} color="#22c55e" />
         </div>
 
         <div style={{ background: 'var(--bg-card)', padding: 20, borderRadius: 8, border: '1px solid var(--border)' }}>
           <h3 style={{ marginBottom: 15, color: 'var(--text-primary)' }}>Recent Payslips</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
-              <span>March 2026</span>
-              <span style={{ fontWeight: 600 }}>{formatCurrency(4800)}</span>
-              <Badge status="Paid" />
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
-              <span>February 2026</span>
-              <span style={{ fontWeight: 600 }}>{formatCurrency(4800)}</span>
-              <Badge status="Paid" />
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0' }}>
-              <span>January 2026</span>
-              <span style={{ fontWeight: 600 }}>{formatCurrency(4800)}</span>
-              <Badge status="Paid" />
-            </div>
+            {personalPayslips.map((payroll) => (
+              <div key={payroll.id} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: 12, alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
+                <span>{getPayslipPeriod(payroll)}</span>
+                <span style={{ fontWeight: 600 }}>{formatCurrency(payroll.net)}</span>
+                <Badge status={payroll.status} />
+                <button className="icon-btn" onClick={() => downloadPayslip(payroll)} title="Download payslip"><FileText size={14} /></button>
+              </div>
+            ))}
+            {!personalPayslips.length && (
+              <div style={{ color: 'var(--text-muted)', fontSize: '0.88rem', padding: '12px 0' }}>
+                No linked payslip records were found for your user profile.
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -436,6 +484,7 @@ const Payroll = () => {
                   </td>
                   <td>
                     <div style={{ display: 'flex', gap: 6 }}>
+                      <button className="icon-btn" onClick={() => downloadPayslip(p)} title="Download payslip"><FileText size={14} /></button>
                       {user?.role !== 'AUDITOR' && (
                         <>
                           <button className="icon-btn" onClick={() => editEmployee(p)}><Edit size={14} /></button>
