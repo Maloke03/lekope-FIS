@@ -13,6 +13,12 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { NAV_ITEMS, getAllowedNavItems } from '../../config/navigation';
+import {
+  APP_OVERVIEW,
+  FAQ_KNOWLEDGE,
+  getPageKnowledge,
+  getRoleLabel,
+} from '../../config/appKnowledge';
 
 const normalize = value =>
   value
@@ -97,6 +103,33 @@ const findBestRoute = query => {
   return scoredItems[0]?.score > 12 ? scoredItems[0].item : null;
 };
 
+const getKnowledgeScore = (entry, query) => {
+  const raw = normalize(query);
+  const compact = compactQuery(query);
+  const terms = [entry.title, ...(entry.keywords || [])].map(normalize);
+
+  return terms.reduce((score, term) => {
+    if (!term) return score;
+    let nextScore = score;
+
+    if (raw === term || compact === term) nextScore += 80;
+    if (raw.includes(term)) nextScore += term.length > 6 ? 32 : 14;
+    if (compact && term.includes(compact)) nextScore += compact.length > 4 ? 18 : 6;
+
+    return nextScore;
+  }, 0);
+};
+
+const findBestKnowledge = query => {
+  const scoredEntries = FAQ_KNOWLEDGE
+    .map(entry => ({ entry, score: getKnowledgeScore(entry, query) }))
+    .sort((a, b) => b.score - a.score);
+
+  return scoredEntries[0]?.score > 12 ? scoredEntries[0].entry : null;
+};
+
+const formatRoleList = roles => roles.map(getRoleLabel).join(', ');
+
 const AIBot = () => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -145,6 +178,41 @@ const AIBot = () => {
     };
   };
 
+  const buildAppOverviewMessage = () => ({
+    text: `${APP_OVERVIEW.name}: ${APP_OVERVIEW.summary} Main areas include: ${APP_OVERVIEW.capabilities.join('; ')}.`,
+    actions: allowedItems.slice(0, 6).map(makeAction),
+  });
+
+  const buildPageSummaryMessage = item => {
+    const knowledge = getPageKnowledge(item.path);
+    const canOpen = isAllowed(item);
+    const roleText = formatRoleList(item.roles);
+    const detailText = knowledge?.answers?.length ? ` ${knowledge.answers.join(' ')}` : '';
+
+    return {
+      text: `${item.label}: ${knowledge?.summary || item.description}${detailText} Access: ${roleText}. ${
+        canOpen
+          ? `Your ${userRole} role can open this page.`
+          : `Your ${userRole} role cannot open this page.`
+      }`,
+      actions: canOpen ? [makeAction(item)] : allowedItems.slice(0, 5).map(makeAction),
+    };
+  };
+
+  const buildPageAccessMessage = item => {
+    const canOpen = isAllowed(item);
+    const roleText = formatRoleList(item.roles);
+
+    return {
+      text: `${item.label} is available to: ${roleText}. ${
+        canOpen
+          ? `Your ${userRole} role is allowed to access it.`
+          : `Your ${userRole} role is not allowed to access it.`
+      }`,
+      actions: canOpen ? [makeAction(item)] : allowedItems.slice(0, 5).map(makeAction),
+    };
+  };
+
   const handleBotResult = query => {
     const trimmed = query.trim();
     const lower = normalize(trimmed);
@@ -158,10 +226,19 @@ const AIBot = () => {
       return;
     }
 
+    const asksCurrentPageSummary =
+      /\b(this page|current page|here)\b/.test(lower) &&
+      /\b(summary|summarize|explain|what|help|about|do here)\b/.test(lower);
+
+    if (asksCurrentPageSummary && currentItem) {
+      addBotMessage(buildPageSummaryMessage(currentItem));
+      return;
+    }
+
     if (/\b(where am i|current page|this page)\b/.test(lower)) {
       addBotMessage({
         text: currentItem
-          ? `You are on ${currentItem.label}. ${currentItem.description}`
+          ? `You are on ${currentItem.label}. ${getPageKnowledge(currentItem.path)?.summary || currentItem.description}`
           : 'You are in the Lekope FIS workspace.',
         actions: currentItem ? [makeAction(currentItem)] : [],
       });
@@ -170,23 +247,24 @@ const AIBot = () => {
 
     const target = findBestRoute(trimmed);
     const asksForList = /\b(access|allowed|available|menu|modules|pages|permissions|where can|what can)\b/.test(lower);
-    const asksForDetails = /\b(explain|help with|tell me about|what is|what does|where do i)\b/.test(lower);
-    const wantsNavigation = /\b(go|open|navigate|show|take|view|launch)\b/.test(lower);
+    const asksForAccess = /\b(access|allowed|permission|permissions|role|roles|who can|can i)\b/.test(lower);
+    const asksForDetails = /\b(about|explain|help with|how do i|summary|summarize|tell me about|what is|what does|where do i)\b/.test(lower);
+    const asksAboutApp = /\b(about app|about lekope|app summary|system summary|what is this app|what does this app do|what is lekope fis)\b/.test(lower);
+    const wantsNavigation = /\b(go|open|navigate|take|launch)\b/.test(lower);
 
     if (target) {
-      if (!isAllowed(target)) {
-        addBotMessage({
-          text: `${target.label} is restricted for your ${userRole} role. I can only take you to pages your account is allowed to access.`,
-          actions: allowedItems.slice(0, 5).map(makeAction),
-        });
+      if (asksForAccess) {
+        addBotMessage(buildPageAccessMessage(target));
         return;
       }
 
-      if (asksForDetails && !wantsNavigation) {
-        addBotMessage({
-          text: `${target.label}: ${target.description}`,
-          actions: [makeAction(target)],
-        });
+      if (!isAllowed(target)) {
+        addBotMessage(buildPageSummaryMessage(target));
+        return;
+      }
+
+      if (asksForDetails || !wantsNavigation) {
+        addBotMessage(buildPageSummaryMessage(target));
         return;
       }
 
@@ -198,13 +276,27 @@ const AIBot = () => {
       return;
     }
 
+    if (asksAboutApp) {
+      addBotMessage(buildAppOverviewMessage());
+      return;
+    }
+
     if (asksForList) {
       addBotMessage(buildAllowedMessage());
       return;
     }
 
+    const knowledgeAnswer = findBestKnowledge(trimmed);
+    if (knowledgeAnswer) {
+      addBotMessage({
+        text: knowledgeAnswer.answer,
+        actions: allowedItems.slice(0, 6).map(makeAction),
+      });
+      return;
+    }
+
     addBotMessage({
-      text: 'I can help with navigation, page access, and finding where a task belongs. Try asking for invoices, bookings, reports, users, payroll, or allowed pages.',
+      text: 'I can answer questions about Lekope FIS pages, roles, permissions, reports, invoices, bookings, payroll, analytics, and where each task belongs.',
       actions: allowedItems.slice(0, 6).map(makeAction),
     });
   };
@@ -327,7 +419,7 @@ const AIBot = () => {
             <input
               value={input}
               onChange={event => setInput(event.target.value)}
-              placeholder="Ask to open invoices, bookings, reports..."
+              placeholder="Ask about a page, role, report, or task..."
               aria-label="Ask Lekope AI"
             />
             <button type="submit" aria-label="Send message" title="Send message">
