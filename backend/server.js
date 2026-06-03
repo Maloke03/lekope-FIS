@@ -1086,6 +1086,146 @@ app.get('/api/analytics/overview', protect, canViewReports, async (req, res) => 
       projectedProfit: forecastProfit.reduce((sum, value) => sum + value, 0)
     };
 
+    const extendedForecastLabels = [];
+    const monthlyRevenueProjection = [];
+    const monthlyExpenseProjection = [];
+    for (let i = 1; i <= 6; i += 1) {
+      const m = new Date(now.getFullYear(), now.getMonth() + i, 1);
+      extendedForecastLabels.push(m.toLocaleString('default', { month: 'short' }));
+      monthlyRevenueProjection.push(Math.max(0, Math.round(baseRevenue * Math.pow(1 + avgMonthlyGrowth, i))));
+      monthlyExpenseProjection.push(Math.max(0, Math.round(baseExpense * (1 + 0.02 * i))));
+    }
+
+    const collectionAssumptions = {
+      Current: { monthIndex: 0, rate: 0.9 },
+      '1-30 days': { monthIndex: 1, rate: 0.7 },
+      '31-60 days': { monthIndex: 2, rate: 0.45 },
+      '60+ days': { monthIndex: 3, rate: 0.2 }
+    };
+    const projectedCollections = new Array(6).fill(0);
+    const receivableBuckets = invoiceBuckets.map((bucket) => {
+      const rule = collectionAssumptions[bucket.bucket] || { monthIndex: 0, rate: 0.5 };
+      const expectedCollection = Math.round(bucket.amount * rule.rate);
+      projectedCollections[rule.monthIndex] += expectedCollection;
+      return {
+        ...bucket,
+        expectedCollection,
+        riskAmount: Math.max(0, bucket.amount - expectedCollection),
+        collectionRate: Number((rule.rate * 100).toFixed(0))
+      };
+    });
+
+    const payableSettlements = [
+      Math.round(currentPayables * 0.5),
+      Math.round(currentPayables * 0.3),
+      Math.round(currentPayables * 0.2),
+      0,
+      0,
+      0
+    ];
+    const cashInflows = monthlyRevenueProjection.map((value, index) => value + projectedCollections[index]);
+    const cashOutflows = monthlyExpenseProjection.map((value, index) => value + payableSettlements[index]);
+    const netCashFlow = cashInflows.map((value, index) => value - cashOutflows[index]);
+    const closingCash = [];
+    let runningCash = cashPosition;
+    let remainingReceivables = receivablesOutstanding;
+    let remainingPayables = currentPayables;
+    const workingCapitalOutlook = extendedForecastLabels.map((label, index) => {
+      runningCash += netCashFlow[index];
+      closingCash.push(Math.round(runningCash));
+      remainingReceivables = Math.max(0, remainingReceivables - projectedCollections[index]);
+      remainingPayables = Math.max(0, remainingPayables - payableSettlements[index]);
+      return {
+        label,
+        cash: Math.round(runningCash),
+        receivables: Math.round(remainingReceivables),
+        payables: Math.round(remainingPayables),
+        workingCapital: Math.round(runningCash + remainingReceivables - remainingPayables)
+      };
+    });
+
+    const annualBudget = 2500000;
+    const monthsElapsed = Math.max(now.getMonth() + 1, 1);
+    const monthlySpendRate = Math.round(totalExpenses / monthsElapsed);
+    const projectedYearEndSpend = Math.round(monthlySpendRate * 12);
+    const budgetRemaining = Math.max(0, annualBudget - totalExpenses);
+    const projectedBudgetVariance = Math.round(annualBudget - projectedYearEndSpend);
+    const monthsUntilBudgetExhausted = monthlySpendRate > 0 && budgetRemaining > 0
+      ? budgetRemaining / monthlySpendRate
+      : 0;
+    const exhaustionDate = budgetRemaining <= 0
+      ? null
+      : new Date(now.getFullYear(), now.getMonth() + Math.ceil(monthsUntilBudgetExhausted), 1);
+
+    const revenueMixProjection = revenueSources.map((source) => {
+      const share = revenueTotal > 0 ? source.amount / revenueTotal : 0;
+      const projectedAmount = Math.round(forecastSummary.nextQuarterRevenue * share);
+      return {
+        name: source.name,
+        currentAmount: source.amount,
+        share: Number((share * 100).toFixed(1)),
+        projectedQuarterAmount: projectedAmount,
+        projectedMonthlyAverage: Math.round(projectedAmount / 3)
+      };
+    }).sort((a, b) => b.projectedQuarterAmount - a.projectedQuarterAmount);
+
+    const currentYearExpenseTotal = expenseCategories.reduce((sum, category) => sum + category.actual, 0);
+    const expenseCategoryProjection = expenseCategories.map((category) => {
+      const share = currentYearExpenseTotal > 0 ? category.actual / currentYearExpenseTotal : 0;
+      const projectedAmount = Math.round(forecastSummary.nextQuarterExpenses * share);
+      return {
+        category: category.category,
+        currentActual: category.actual,
+        budget: category.budget,
+        share: Number((share * 100).toFixed(1)),
+        projectedQuarterAmount: projectedAmount,
+        projectedMonthlyAverage: Math.round(projectedAmount / 3)
+      };
+    }).sort((a, b) => b.projectedQuarterAmount - a.projectedQuarterAmount);
+
+    const expectedReceivableCollections = receivableBuckets.reduce((sum, bucket) => sum + bucket.expectedCollection, 0);
+    const collectionRisk = receivableBuckets.reduce((sum, bucket) => sum + bucket.riskAmount, 0);
+    const vatRate = 0.15;
+    const financialProjections = {
+      cashFlow: {
+        labels: extendedForecastLabels,
+        openingCash: cashPosition,
+        inflows: cashInflows,
+        outflows: cashOutflows,
+        net: netCashFlow,
+        closingCash
+      },
+      receivables: {
+        outstanding: receivablesOutstanding,
+        expectedCollections: expectedReceivableCollections,
+        collectionRisk,
+        buckets: receivableBuckets
+      },
+      budgetBurn: {
+        annualBudget,
+        spentToDate: totalExpenses,
+        remaining: budgetRemaining,
+        monthlySpendRate,
+        projectedYearEndSpend,
+        projectedVariance: projectedBudgetVariance,
+        exhaustionMonth: exhaustionDate
+          ? exhaustionDate.toLocaleString('default', { month: 'short', year: 'numeric' })
+          : 'Already over budget'
+      },
+      revenueMix: revenueMixProjection,
+      expenseCategories: expenseCategoryProjection,
+      workingCapital: {
+        labels: workingCapitalOutlook.map((entry) => entry.label),
+        values: workingCapitalOutlook.map((entry) => entry.workingCapital),
+        outlook: workingCapitalOutlook
+      },
+      taxReserve: {
+        vatRate,
+        projectedVatReserve: Math.round(forecastSummary.nextQuarterRevenue * vatRate),
+        projectedNetAfterVat: Math.round(forecastSummary.nextQuarterRevenue * (1 - vatRate))
+      }
+    };
+
     const scorecard = [
       { axis: 'Revenue Growth', val: Math.min(100, Math.max(0, Math.round(revenueGrowth))) },
       { axis: 'Profit Margin', val: Math.min(100, Math.max(0, Math.round(profitMargin))) },
@@ -1160,6 +1300,7 @@ app.get('/api/analytics/overview', protect, canViewReports, async (req, res) => 
         profit: forecastProfit
       },
       forecastSummary,
+      financialProjections,
       topClients,
       quarterlyPerformance,
       scorecard,

@@ -147,7 +147,7 @@ export const NAV_GROUPS = [
         icon: PieChart,
         roles: PAGE_ACCESS['/analytics'],
         description: 'Explore charts, trends, and financial analytics.',
-        keywords: ['analytics', 'analysis', 'charts', 'insights', 'trends'],
+        keywords: ['analytics', 'analysis', 'charts', 'insights', 'trends', 'projection', 'projections', 'forecast', 'cash flow forecast'],
       },
       {
         label: 'Audit Log',
