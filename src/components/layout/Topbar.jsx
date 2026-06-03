@@ -46,7 +46,7 @@ const Topbar = ({ onToggleSidebar }) => {
 
   return (
     <header style={{
-      height:60,
+      minHeight: 60,
       background:'var(--bg-surface)',
       borderBottom:'1px solid var(--border)',
       display:'flex',
@@ -56,7 +56,12 @@ const Topbar = ({ onToggleSidebar }) => {
       position:'sticky',
       top:0,
       zIndex:90,
-      gap:14
+      gap:14,
+      flexWrap: 'wrap',
+      '@media (max-width: 768px)': {
+        padding: '0 14px',
+        minHeight: 56,
+      }
     }}>
       {/* Left side - Welcome message */}
       <button
@@ -68,13 +73,19 @@ const Topbar = ({ onToggleSidebar }) => {
         <Menu size={18} />
       </button>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: 1 }}>
         <div style={{
           fontSize: '0.85rem',
           color: 'var(--text-primary)',
-          fontWeight: 500
+          fontWeight: 500,
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          '@media (max-width: 768px)': {
+            fontSize: '0.75rem',
+          }
         }}>
-          Welcome back, <span style={{ color: 'var(--gold)', fontWeight: 600 }}>
+          Welcome, <span style={{ color: 'var(--gold)', fontWeight: 600 }}>
             {user?.name?.split(' ')[0] || 'User'}
           </span>
         </div>
@@ -85,7 +96,11 @@ const Topbar = ({ onToggleSidebar }) => {
           padding: '4px 10px',
           background: `${roleInfo.color}15`,
           borderRadius: 20,
-          border: `1px solid ${roleInfo.color}30`
+          border: `1px solid ${roleInfo.color}30`,
+          whiteSpace: 'nowrap',
+          '@media (max-width: 768px)': {
+            display: 'none'
+          }
         }}>
           <span style={{ fontSize: '0.75rem' }}>{roleInfo.badge}</span>
           <span style={{
@@ -100,7 +115,13 @@ const Topbar = ({ onToggleSidebar }) => {
 
       {/* Right side - Date, Notifications, User */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-        <span style={{ fontSize:'0.82rem', color:'var(--text-muted)' }}>{now}</span>
+        <span style={{ 
+          fontSize:'0.82rem', 
+          color:'var(--text-muted)',
+          '@media (max-width: 768px)': {
+            display: 'none'
+          }
+        }}>{now}</span>
         
         {/* Notification Bell */}
         <button style={{
@@ -177,12 +198,15 @@ const Topbar = ({ onToggleSidebar }) => {
                 top:45,
                 right:0,
                 width:260,
+                maxWidth: 'calc(100vw - 16px)',
                 background:'var(--bg-surface)',
                 border:'1px solid var(--border)',
                 borderRadius:8,
                 boxShadow:'0 4px 12px rgba(0,0,0,0.15)',
                 zIndex:100,
-                overflow:'hidden'
+                overflow:'hidden',
+                maxHeight: 'calc(100vh - 100px)',
+                overflowY: 'auto'
               }}>
                 {/* User Info */}
                 <div style={{

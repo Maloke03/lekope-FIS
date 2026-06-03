@@ -125,7 +125,7 @@ body {
 /* Modal */
 .modal-overlay {
   position:fixed; inset:0; z-index:1000;
-  background:rgba(0,0,0,0.7); backdrop-filter:blur(4px);
+  background:rgba(0,0,0,0.7); -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px);
   display:flex; align-items:center; justify-content:center; padding:16px;
 }
 .modal-box {
@@ -184,6 +184,7 @@ body {
   background: linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
               linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
   background-size: 42px 42px;
+  -webkit-mask-image: linear-gradient(180deg, rgba(0,0,0,0.75), transparent 78%);
   mask-image: linear-gradient(180deg, rgba(0,0,0,0.75), transparent 78%);
   pointer-events: none;
 }
@@ -204,6 +205,7 @@ body {
   text-decoration: none;
   font-size: 0.84rem;
   font-weight: 700;
+  -webkit-backdrop-filter: blur(14px);
   backdrop-filter: blur(14px);
   transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
 }
@@ -268,6 +270,7 @@ body {
   border-radius: 8px;
   border: 1px solid rgba(255,255,255,0.12);
   background: rgba(9,15,28,0.58);
+  -webkit-backdrop-filter: blur(16px);
   backdrop-filter: blur(16px);
 }
 
@@ -337,6 +340,7 @@ body {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 14px;
+  width: 100%;
 }
 
 .auth-field {
@@ -500,6 +504,7 @@ body {
   border: 1px solid rgba(255,255,255,0.1);
   border-radius: 18px;
   background: rgba(15,24,41,0.78);
+  -webkit-backdrop-filter: blur(18px);
   backdrop-filter: blur(18px);
   box-shadow: 0 20px 60px rgba(0,0,0,0.22);
 }
@@ -1957,4 +1962,366 @@ body {
   .ai-assistant__quickbar button {
     justify-content: flex-start;
   }
+}
+
+/* =========================================================
+   COMPREHENSIVE MOBILE RESPONSIVE STYLES (Mobile-First)
+   ========================================================= */
+
+/* Media query for tablets and smaller devices */
+@media (max-width: 1024px) {
+  /* Reduce padding and spacing */
+  main { padding: 20px 18px !important; }
+  .card { padding: 16px 18px; }
+  .page-h { font-size: 1.5rem; }
+  
+  /* Adjust grids */
+  .g4 { grid-template-columns: repeat(2, 1fr); }
+  .g3 { grid-template-columns: repeat(2, 1fr); }
+  .form-grid { grid-template-columns: 1fr; }
+  
+  /* Reduce button padding */
+  .btn { padding: 8px 14px; font-size: 0.8rem; }
+  .btn-sm { padding: 5px 10px; font-size: 0.75rem; }
+  
+  /* Responsive modals */
+  .modal-box { width: 95vw; max-width: 480px; }
+}
+
+/* Media query for large phones and small tablets (768px and below) */
+@media (max-width: 768px) {
+  /* Typography scaling */
+  html { font-size: 15px; }
+  .page-h { font-size: 1.4rem; margin-bottom: 12px; }
+  .page-sub { font-size: 0.8rem; }
+  
+  /* All grids to single column */
+  .g4, .g3, .g2 { grid-template-columns: 1fr; gap: 12px; }
+  
+  /* Forms */
+  .form-grid { grid-template-columns: 1fr; }
+  .form-field { margin-bottom: 12px; }
+  .form-label { font-size: 0.65rem; }
+  .form-input, .form-select, .form-textarea { 
+    padding: 8px 10px; 
+    font-size: 0.82rem;
+    min-height: 38px;
+  }
+  .form-textarea { min-height: 60px; }
+  
+  /* Auth forms */
+  .auth-form__row { grid-template-columns: 1fr; }
+  
+  /* Buttons */
+  .btn { 
+    padding: 7px 12px; 
+    font-size: 0.75rem;
+    min-height: 36px;
+  }
+  .btn-sm { 
+    padding: 5px 10px; 
+    font-size: 0.7rem;
+    min-height: 32px;
+  }
+  
+  /* Cards */
+  .card { 
+    padding: 14px 16px;
+    border-radius: var(--r);
+  }
+  
+  /* Tables - convert to card/stack view */
+  .tbl {
+    display: block;
+    border: none;
+  }
+  .tbl thead {
+    display: none;
+  }
+  .tbl tbody {
+    display: grid;
+    gap: 12px;
+  }
+  .tbl tbody tr {
+    display: grid;
+    gap: 12px;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    background: var(--bg-card);
+  }
+  .tbl tbody tr:hover {
+    background: var(--bg-hover);
+  }
+  .tbl td {
+    border: none;
+    padding: 0;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 8px;
+    align-items: center;
+  }
+  .tbl td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--text-secondary);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  
+  /* Modal */
+  .modal-overlay { padding: 12px; }
+  .modal-box { 
+    width: calc(100vw - 24px);
+    max-width: 100%;
+    border-radius: 12px;
+    max-height: calc(100vh - 40px);
+  }
+  .modal-head { padding: 14px 16px; }
+  .modal-body { padding: 16px; }
+  .modal-foot { flex-wrap: wrap; gap: 8px; }
+  
+  /* Tabs */
+  .tabs { 
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+    gap: 6px;
+  }
+  .tab-btn { 
+    padding: 6px 10px;
+    font-size: 0.75rem;
+    border-radius: var(--r-sm);
+  }
+  
+  /* Auth pages */
+  .auth-page {
+    padding: 16px;
+    min-height: 100vh;
+  }
+  .auth-shell {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+  .auth-visual { 
+    display: none;
+  }
+  .auth-card {
+    padding: 24px 18px;
+  }
+  .auth-card h1 {
+    font-size: 1.8rem;
+    margin-bottom: 10px;
+  }
+  .auth-copy {
+    max-width: 100%;
+    margin-bottom: 20px;
+  }
+  .auth-form__row {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  
+  /* Section headings */
+  .sec-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .sec-title { font-size: 0.95rem; }
+  
+  /* Badges */
+  .badge {
+    padding: 3px 8px;
+    font-size: 0.65rem;
+  }
+  
+  /* Alert boxes */
+  .alert-box {
+    padding: 12px 14px;
+    gap: 8px;
+    font-size: 0.8rem;
+  }
+  
+  /* Topbar spacing */
+  header { padding: 0 14px; gap: 8px; }
+  
+  /* Main content spacing */
+  main { 
+    padding: 16px 12px !important;
+    flex: 1;
+  }
+  
+  /* Fix page-level spacing issues */
+  .page { padding: 0; }
+}
+
+/* Media query for small phones (480px and below) */
+@media (max-width: 480px) {
+  /* Typography */
+  html { font-size: 14px; }
+  .page-h { font-size: 1.2rem; margin-bottom: 10px; }
+  
+  /* Reduce all spacing */
+  .card { padding: 12px 14px; }
+  .form-field { margin-bottom: 10px; }
+  
+  /* Buttons - make them wider for touch */
+  .btn { 
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 0.75rem;
+    min-height: 44px; /* Touch target minimum */
+    justify-content: center;
+  }
+  .btn-sm { 
+    padding: 8px 10px;
+    font-size: 0.7rem;
+    min-height: 40px;
+  }
+  
+  /* Forms - larger touch targets */
+  .form-input, .form-select, .form-textarea {
+    padding: 10px 12px;
+    font-size: 16px; /* Prevent zoom on iOS */
+    min-height: 44px;
+  }
+  
+  /* Modal closer to edges */
+  .modal-overlay { padding: 8px; }
+  .modal-box { 
+    width: calc(100vw - 16px);
+    border-radius: 10px;
+  }
+  
+  /* Full-width tabs */
+  .tabs {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+  .tab-btn { width: 100%; }
+  
+  /* Flex layouts for better mobile */
+  .flex-row { 
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  /* Icon buttons - larger touch targets */
+  .icon-btn { 
+    min-width: 40px;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  /* Sidebar toggle more prominent */
+  .sidebar-toggle-button {
+    width: 40px;
+    height: 40px;
+  }
+  
+  /* Reduce main padding further */
+  main { padding: 14px 10px !important; }
+  
+  /* Header spacing */
+  header { 
+    padding: 0 10px;
+    height: auto;
+    min-height: 56px;
+    flex-wrap: wrap;
+  }
+  
+  /* Hide long text on mobile */
+  .hide-mobile { display: none; }
+  
+  /* Reduce icon sizes */
+  .page-h { font-size: 1.1rem; }
+  
+  /* Make sure cards don't have excessive padding */
+  .card { margin-bottom: 10px; }
+  
+  /* Adjust badge sizing */
+  .badge {
+    padding: 2px 6px;
+    font-size: 0.6rem;
+  }
+  
+  /* Reduce table cell padding */
+  .tbl td { padding: 0; }
+  .tbl tbody tr { padding: 10px 12px; }
+}
+
+/* Extra small phones (360px and below) */
+@media (max-width: 360px) {
+  .page-h { font-size: 1rem; }
+  .card { padding: 10px 12px; }
+  .btn { 
+    min-height: 40px;
+    padding: 8px 10px;
+    font-size: 0.7rem;
+  }
+  main { padding: 12px 8px !important; }
+  header { padding: 0 8px; }
+}
+
+/* =========================================================
+   SPECIFIC RESPONSIVE COMPONENTS
+   ========================================================= */
+
+/* Responsive Dashboard/Page Grids */
+@media (max-width: 1024px) {
+  /* Dashboard metrics */
+  .dashboard-metric { grid-template-columns: 1fr 1fr; }
+  .stat-card { padding: 16px; }
+  .stat-value { font-size: 1.4rem; }
+  .stat-label { font-size: 0.75rem; }
+}
+
+@media (max-width: 768px) {
+  .dashboard-metric { grid-template-columns: 1fr; }
+  .stat-card { padding: 14px; }
+  .stat-value { font-size: 1.2rem; }
+  .stat-label { font-size: 0.7rem; }
+  
+  /* Chart containers */
+  canvas { max-width: 100% !important; height: auto !important; }
+  
+  /* Make chart wrapper responsive */
+  [style*="height: 260"]  { height: 200px !important; }
+  [style*="height: 320"]  { height: 240px !important; }
+  [style*="height: 280"]  { height: 220px !important; }
+}
+
+@media (max-width: 480px) {
+  .dashboard-metric { grid-template-columns: 1fr; }
+  .stat-card { padding: 12px; }
+  .stat-value { font-size: 1rem; }
+  .stat-label { font-size: 0.65rem; }
+  
+  /* Smaller charts for mobile */
+  [style*="height: 260"]  { height: 160px !important; }
+  [style*="height: 320"]  { height: 180px !important; }
+  [style*="height: 280"]  { height: 170px !important; }
+}
+
+/* Touch-friendly improvements */
+@media (hover: none) and (pointer: coarse) {
+  /* Touch devices */
+  .btn, .icon-btn, .tab-btn, .card {
+    transition: background 0.2s ease, border-color 0.2s ease;
+  }
+  
+  .btn:active { filter: brightness(0.95); }
+  .icon-btn:active { background: rgba(255,255,255,0.12); }
+  
+  /* Larger touch targets for interactive elements */
+  button, a, input, select {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Better spacing around clickable elements */
+  .tbl td { padding: 10px 12px; }
 }
